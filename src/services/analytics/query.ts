@@ -2,7 +2,7 @@ import { format, parseISO, startOfMonth, endOfMonth, subMonths, subDays, startOf
 import { es } from 'date-fns/locale';
 import { formatMoney, formatPercent } from '@/lib/money';
 import { isWeekend, lastNMonths, monthRange, toISO } from '@/lib/date';
-import { normalizeText, round } from '@/lib/utils';
+import { normalizeText, plural, round } from '@/lib/utils';
 import type { AiQueryAnswer } from '@/types/ai';
 import type { CategoryTree } from '@/types/category';
 import type { Transaction } from '@/types/transaction';
@@ -88,7 +88,7 @@ export function answerFinanceQuestion(question: string, ctx: QueryContext): AiQu
     case 'income': {
       return {
         question,
-        answer: `Ingresaron ${money(summary.income)} en ${resolved.periodLabel.toLowerCase()}, en ${rows.filter(isEarning).length} movimientos.`,
+        answer: `Ingresaron ${money(summary.income)} en ${resolved.periodLabel.toLowerCase()}, en ${plural(rows.filter(isEarning).length, 'movimiento')}.`,
         metrics: [
           { label: 'Ingresos', value: money(summary.income) },
           { label: 'Movimientos', value: String(rows.filter(isEarning).length) },
@@ -128,7 +128,7 @@ export function answerFinanceQuestion(question: string, ctx: QueryContext): AiQu
       return {
         question,
         answer: ranking.length
-          ? `Donde más gastaste fue ${ranking[0].merchant}: ${money(ranking[0].amount)} en ${ranking[0].count} compras.`
+          ? `Donde más gastaste fue ${ranking[0].merchant}: ${money(ranking[0].amount)} en ${plural(ranking[0].count, 'compra')}.`
           : 'No hay comercios registrados en ese período.',
         metrics: ranking.map((r) => ({ label: r.merchant, value: money(r.amount), hint: `${r.count} compras` })),
         chart: { kind: 'bar', data: ranking.map((r) => ({ label: r.merchant, value: r.amount })) },
@@ -138,7 +138,7 @@ export function answerFinanceQuestion(question: string, ctx: QueryContext): AiQu
     case 'count': {
       return {
         question,
-        answer: `Registraste ${rows.length} movimientos en ${resolved.periodLabel.toLowerCase()}.`,
+        answer: `Registraste ${plural(rows.length, 'movimiento')} en ${resolved.periodLabel.toLowerCase()}.`,
         metrics: [{ label: 'Movimientos', value: String(rows.length) }],
         used,
       };
@@ -151,7 +151,7 @@ export function answerFinanceQuestion(question: string, ctx: QueryContext): AiQu
         .join(' > ');
       return {
         question,
-        answer: `Gastaste ${money(summary.expense)}${label ? ` en ${label}` : ''} en ${resolved.periodLabel.toLowerCase()} (${spending.length} movimientos, promedio ${money(average)}).`,
+        answer: `Gastaste ${money(summary.expense)}${label ? ` en ${label}` : ''} en ${resolved.periodLabel.toLowerCase()} (${plural(spending.length, 'movimiento')}, promedio ${money(average)}).`,
         metrics: [
           { label: 'Total', value: money(summary.expense) },
           { label: 'Movimientos', value: String(spending.length) },

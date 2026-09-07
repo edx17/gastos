@@ -66,7 +66,7 @@ export default function ReportsPage() {
       </header>
 
       <DateRangePicker value={range} onChange={setRange} />
-      <FilterBar filters={filters} onChange={setFilters} showSearch={false} />
+      <FilterBar filters={filters} onChange={setFilters} showSearch={false} showSort={false} />
 
       {bundle.error ? <ErrorNote error={bundle.error} onRetry={bundle.reload} /> : null}
 

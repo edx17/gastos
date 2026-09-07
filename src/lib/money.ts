@@ -32,7 +32,9 @@ export function formatMoney(value: number, options: FormatMoneyOptions = {}): st
   const { currency = 'ARS', compactDecimals = true, signDisplay = 'auto', withSymbol = true } = options;
   const def = currencyDef(currency);
   const abs = Math.abs(value);
-  const decimals = options.decimals ?? (compactDecimals && abs >= 10000 ? 0 : def.decimals);
+  // Cents only show up when they exist: "$8.500" reads better than "$8.500,00".
+  const hasFraction = Math.abs(value % 1) > 0.004;
+  const decimals = options.decimals ?? (compactDecimals && (!hasFraction || abs >= 10000) ? 0 : def.decimals);
 
   const formatted = new Intl.NumberFormat('es-AR', {
     minimumFractionDigits: decimals,
@@ -81,19 +83,36 @@ export function convert(
   return { amount: round(amount * rate, 2), rate: round(rate, 6) };
 }
 
-export function parseAmountInput(input: string): number | null {
-  const cleaned = input.replace(/[^\d.,-]/g, '').trim();
-  if (!cleaned) return null;
-  const lastComma = cleaned.lastIndexOf(',');
-  const lastDot = cleaned.lastIndexOf('.');
+/**
+ * Reads a numeric literal the Argentine way: `.` groups thousands, `,` is the decimal
+ * separator. A lone dot followed by exactly three digits is a thousands separator
+ * (`3.200` = 3200); anything else is a decimal point (`3.20` = 3.2).
+ */
+export function parseNumericLiteral(literal: string): number | null {
+  const cleaned = literal.replace(/\s/g, '');
+  if (!/\d/.test(cleaned)) return null;
+
+  const hasComma = cleaned.includes(',');
+  const hasDot = cleaned.includes('.');
+
   let normalized = cleaned;
-  if (lastComma > lastDot) {
-    normalized = cleaned.replace(/\./g, '').replace(',', '.');
-  } else if (lastDot > lastComma) {
-    normalized = cleaned.replace(/,/g, '');
-  } else {
-    normalized = cleaned.replace(/[.,]/g, '');
+  if (hasComma && hasDot) {
+    normalized = cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.')
+      ? cleaned.replace(/\./g, '').replace(',', '.')
+      : cleaned.replace(/,/g, '');
+  } else if (hasComma) {
+    normalized = cleaned.replace(',', '.');
+  } else if (hasDot) {
+    const parts = cleaned.split('.');
+    const looksLikeThousands = parts.length > 2 || parts[parts.length - 1].length === 3;
+    normalized = looksLikeThousands ? parts.join('') : cleaned;
   }
+
   const value = Number(normalized);
   return Number.isFinite(value) ? value : null;
+}
+
+/** Same rules, applied to whatever the user typed into a form field. */
+export function parseAmountInput(input: string): number | null {
+  return parseNumericLiteral(input.replace(/[^\d.,-]/g, '').trim());
 }

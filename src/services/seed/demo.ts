@@ -74,44 +74,44 @@ interface SpendingPattern {
 }
 
 const PATTERNS: SpendingPattern[] = [
-  { category: 'alimentacion', subcategory: 'supermercado', merchants: ['Carrefour', 'Coto', 'Día%', 'Jumbo'], min: 28000, max: 96000, perMonth: 4 },
-  { category: 'alimentacion', subcategory: 'verduleria', merchants: ['Verdulería del barrio'], min: 6000, max: 18000, perMonth: 3 },
-  { category: 'alimentacion', subcategory: 'carniceria', merchants: ['Carnicería La Estrella'], min: 12000, max: 38000, perMonth: 2 },
-  { category: 'alimentacion', subcategory: 'panaderia', merchants: ['Panadería Los Dos Hermanos'], min: 2500, max: 7000, perMonth: 4 },
-  { category: 'alimentacion', subcategory: 'delivery', merchants: ['PedidosYa', 'Rappi'], min: 9000, max: 26000, perMonth: 4 },
-  { category: 'alimentacion', subcategory: 'restaurante', merchants: ['Parrilla Don Julio', 'Sushi Club', 'Bodegón El Puente'], min: 18000, max: 62000, perMonth: 2 },
-  { category: 'alimentacion', subcategory: 'cafe', merchants: ['Starbucks', 'Havanna', 'Café de la esquina'], min: 3000, max: 9000, perMonth: 5 },
-  { category: 'alimentacion', subcategory: 'comida-rapida', merchants: ["McDonald's", 'Mostaza', 'Burger King'], min: 7000, max: 19000, perMonth: 2 },
-  { category: 'transporte', subcategory: 'combustible', merchants: ['YPF', 'Shell', 'Axion'], min: 22000, max: 48000, perMonth: 3 },
-  { category: 'transporte', subcategory: 'transporte-publico', merchants: ['SUBE'], min: 3000, max: 9000, perMonth: 2 },
-  { category: 'transporte', subcategory: 'apps-movilidad', merchants: ['Uber', 'Cabify', 'DiDi'], min: 4000, max: 16000, perMonth: 4 },
-  { category: 'transporte', subcategory: 'peajes', merchants: ['Telepase'], min: 1800, max: 4500, perMonth: 2 },
-  { category: 'hogar', subcategory: 'alquiler', merchants: ['Inmobiliaria Rivas'], min: 450000, max: 450000, perMonth: 1, recurring: true, descriptions: ['Alquiler'] },
-  { category: 'hogar', subcategory: 'expensas', merchants: ['Consorcio'], min: 85000, max: 105000, perMonth: 1, recurring: true, descriptions: ['Expensas'] },
-  { category: 'hogar', subcategory: 'electricidad', merchants: ['Edesur'], min: 28000, max: 62000, perMonth: 1, recurring: true, descriptions: ['Factura de luz'] },
-  { category: 'hogar', subcategory: 'gas', merchants: ['Metrogas'], min: 12000, max: 39000, perMonth: 1, recurring: true, descriptions: ['Factura de gas'] },
-  { category: 'hogar', subcategory: 'internet', merchants: ['Fibertel'], min: 32000, max: 36000, perMonth: 1, recurring: true, descriptions: ['Internet'] },
-  { category: 'hogar', subcategory: 'telefonia', merchants: ['Personal'], min: 14000, max: 18000, perMonth: 1, recurring: true, descriptions: ['Celular'] },
-  { category: 'hogar', subcategory: 'mantenimiento-hogar', merchants: ['Easy', 'Ferretería del barrio'], min: 8000, max: 45000, perMonth: 1 },
-  { category: 'salud', subcategory: 'obra-social', merchants: ['OSDE'], min: 118000, max: 132000, perMonth: 1, recurring: true, descriptions: ['Prepaga'] },
-  { category: 'salud', subcategory: 'farmacia', merchants: ['Farmacity'], min: 4000, max: 26000, perMonth: 2 },
-  { category: 'salud', subcategory: 'medico', merchants: ['Consultorio'], min: 18000, max: 45000, perMonth: 1 },
-  { category: 'educacion', subcategory: 'cursos', merchants: ['Udemy', 'Platzi'], min: 9000, max: 32000, perMonth: 1 },
-  { category: 'educacion', subcategory: 'libros', merchants: ['Cúspide', 'El Ateneo'], min: 12000, max: 34000, perMonth: 1 },
-  { category: 'entretenimiento', subcategory: 'streaming', merchants: ['Netflix'], min: 9500, max: 9500, perMonth: 1, recurring: true, descriptions: ['Netflix'] },
-  { category: 'entretenimiento', subcategory: 'streaming', merchants: ['Spotify'], min: 5900, max: 5900, perMonth: 1, recurring: true, descriptions: ['Spotify'] },
-  { category: 'entretenimiento', subcategory: 'cine', merchants: ['Cinemark', 'Hoyts'], min: 8000, max: 22000, perMonth: 1 },
-  { category: 'entretenimiento', subcategory: 'salidas', merchants: ['Bar Nómade', 'Boliche'], min: 12000, max: 48000, perMonth: 2 },
-  { category: 'deporte', subcategory: 'gimnasio', merchants: ['SportClub'], min: 28000, max: 32000, perMonth: 1, recurring: true, descriptions: ['Cuota del gym'] },
-  { category: 'deporte', subcategory: 'futbol', merchants: ['Cancha El Potrero'], min: 6000, max: 12000, perMonth: 3, descriptions: ['Fútbol de los jueves'] },
-  { category: 'ropa', subcategory: 'indumentaria', merchants: ['Zara', 'Kevingston'], min: 25000, max: 120000, perMonth: 1 },
-  { category: 'ropa', subcategory: 'calzado', merchants: ['Stock Center', 'Dexter'], min: 60000, max: 180000, perMonth: 0.4 },
-  { category: 'personal', subcategory: 'cuidado-personal', merchants: ['Peluquería', 'Farmacity'], min: 8000, max: 26000, perMonth: 1 },
-  { category: 'personal', subcategory: 'regalos', merchants: ['Mercado Libre'], min: 15000, max: 85000, perMonth: 1 },
-  { category: 'personal', subcategory: 'mascotas', merchants: ['Veterinaria San Roque'], min: 12000, max: 42000, perMonth: 1 },
-  { category: 'finanzas', subcategory: 'impuestos', merchants: ['ARCA'], min: 32000, max: 68000, perMonth: 1, recurring: true, descriptions: ['Monotributo'] },
-  { category: 'finanzas', subcategory: 'comisiones', merchants: ['Banco'], min: 1200, max: 4500, perMonth: 2 },
-  { category: 'hogar', subcategory: 'limpieza', merchants: ['Carrefour'], min: 5000, max: 16000, perMonth: 2 },
+  { category: 'alimentacion', subcategory: 'supermercado', merchants: ['Carrefour', 'Coto', 'Día%', 'Jumbo'], min: 28000, max: 96000, perMonth: 2 },
+  { category: 'alimentacion', subcategory: 'verduleria', merchants: ['Verdulería del barrio'], min: 6000, max: 18000, perMonth: 1.5 },
+  { category: 'alimentacion', subcategory: 'carniceria', merchants: ['Carnicería La Estrella'], min: 12000, max: 38000, perMonth: 1 },
+  { category: 'alimentacion', subcategory: 'panaderia', merchants: ['Panadería Los Dos Hermanos'], min: 2500, max: 7000, perMonth: 2 },
+  { category: 'alimentacion', subcategory: 'delivery', merchants: ['PedidosYa', 'Rappi'], min: 9000, max: 26000, perMonth: 2 },
+  { category: 'alimentacion', subcategory: 'restaurante', merchants: ['Parrilla Don Julio', 'Sushi Club', 'Bodegón El Puente'], min: 18000, max: 62000, perMonth: 1 },
+  { category: 'alimentacion', subcategory: 'cafe', merchants: ['Starbucks', 'Havanna', 'Café de la esquina'], min: 3000, max: 9000, perMonth: 2.5 },
+  { category: 'alimentacion', subcategory: 'comida-rapida', merchants: ["McDonald's", 'Mostaza', 'Burger King'], min: 7000, max: 19000, perMonth: 1 },
+  { category: 'transporte', subcategory: 'combustible', merchants: ['YPF', 'Shell', 'Axion'], min: 22000, max: 48000, perMonth: 1.5 },
+  { category: 'transporte', subcategory: 'transporte-publico', merchants: ['SUBE'], min: 3000, max: 9000, perMonth: 1 },
+  { category: 'transporte', subcategory: 'apps-movilidad', merchants: ['Uber', 'Cabify', 'DiDi'], min: 4000, max: 16000, perMonth: 2 },
+  { category: 'transporte', subcategory: 'peajes', merchants: ['Telepase'], min: 1800, max: 4500, perMonth: 1 },
+  { category: 'hogar', subcategory: 'alquiler', merchants: ['Inmobiliaria Rivas'], min: 450000, max: 450000, perMonth: 0.5, recurring: true, descriptions: ['Alquiler'] },
+  { category: 'hogar', subcategory: 'expensas', merchants: ['Consorcio'], min: 85000, max: 105000, perMonth: 0.5, recurring: true, descriptions: ['Expensas'] },
+  { category: 'hogar', subcategory: 'electricidad', merchants: ['Edesur'], min: 28000, max: 62000, perMonth: 0.5, recurring: true, descriptions: ['Factura de luz'] },
+  { category: 'hogar', subcategory: 'gas', merchants: ['Metrogas'], min: 12000, max: 39000, perMonth: 0.5, recurring: true, descriptions: ['Factura de gas'] },
+  { category: 'hogar', subcategory: 'internet', merchants: ['Fibertel'], min: 32000, max: 36000, perMonth: 0.5, recurring: true, descriptions: ['Internet'] },
+  { category: 'hogar', subcategory: 'telefonia', merchants: ['Personal'], min: 14000, max: 18000, perMonth: 0.5, recurring: true, descriptions: ['Celular'] },
+  { category: 'hogar', subcategory: 'mantenimiento-hogar', merchants: ['Easy', 'Ferretería del barrio'], min: 8000, max: 45000, perMonth: 0.5 },
+  { category: 'salud', subcategory: 'obra-social', merchants: ['OSDE'], min: 118000, max: 132000, perMonth: 0.5, recurring: true, descriptions: ['Prepaga'] },
+  { category: 'salud', subcategory: 'farmacia', merchants: ['Farmacity'], min: 4000, max: 26000, perMonth: 1 },
+  { category: 'salud', subcategory: 'medico', merchants: ['Consultorio'], min: 18000, max: 45000, perMonth: 0.5 },
+  { category: 'educacion', subcategory: 'cursos', merchants: ['Udemy', 'Platzi'], min: 9000, max: 32000, perMonth: 0.5 },
+  { category: 'educacion', subcategory: 'libros', merchants: ['Cúspide', 'El Ateneo'], min: 12000, max: 34000, perMonth: 0.5 },
+  { category: 'entretenimiento', subcategory: 'streaming', merchants: ['Netflix'], min: 9500, max: 9500, perMonth: 0.5, recurring: true, descriptions: ['Netflix'] },
+  { category: 'entretenimiento', subcategory: 'streaming', merchants: ['Spotify'], min: 5900, max: 5900, perMonth: 0.5, recurring: true, descriptions: ['Spotify'] },
+  { category: 'entretenimiento', subcategory: 'cine', merchants: ['Cinemark', 'Hoyts'], min: 8000, max: 22000, perMonth: 0.5 },
+  { category: 'entretenimiento', subcategory: 'salidas', merchants: ['Bar Nómade', 'Boliche'], min: 12000, max: 48000, perMonth: 1 },
+  { category: 'deporte', subcategory: 'gimnasio', merchants: ['SportClub'], min: 28000, max: 32000, perMonth: 0.5, recurring: true, descriptions: ['Cuota del gym'] },
+  { category: 'deporte', subcategory: 'futbol', merchants: ['Cancha El Potrero'], min: 6000, max: 12000, perMonth: 1.5, descriptions: ['Fútbol de los jueves'] },
+  { category: 'ropa', subcategory: 'indumentaria', merchants: ['Zara', 'Kevingston'], min: 25000, max: 120000, perMonth: 0.5 },
+  { category: 'ropa', subcategory: 'calzado', merchants: ['Stock Center', 'Dexter'], min: 60000, max: 180000, perMonth: 0.2 },
+  { category: 'personal', subcategory: 'cuidado-personal', merchants: ['Peluquería', 'Farmacity'], min: 8000, max: 26000, perMonth: 0.5 },
+  { category: 'personal', subcategory: 'regalos', merchants: ['Mercado Libre'], min: 15000, max: 85000, perMonth: 0.5 },
+  { category: 'personal', subcategory: 'mascotas', merchants: ['Veterinaria San Roque'], min: 12000, max: 42000, perMonth: 0.5 },
+  { category: 'finanzas', subcategory: 'impuestos', merchants: ['ARCA'], min: 32000, max: 68000, perMonth: 0.5, recurring: true, descriptions: ['Monotributo'] },
+  { category: 'finanzas', subcategory: 'comisiones', merchants: ['Banco'], min: 1200, max: 4500, perMonth: 1 },
+  { category: 'hogar', subcategory: 'limpieza', merchants: ['Carrefour'], min: 5000, max: 16000, perMonth: 1 },
 ];
 
 const INCOME_PATTERNS = [
@@ -190,9 +190,9 @@ export function buildDemoDataset(userId: string, reference = new Date()): DemoDa
     }
 
     for (const pattern of PATTERNS) {
-      const occurrences = pattern.recurring
-        ? 1
-        : Math.round(pattern.perMonth * (0.7 + rng() * 0.6));
+      // The current month is only partly elapsed, so it gets proportionally fewer movements.
+      const density = isCurrentMonth ? lastDay / daysInMonth : 1;
+      const occurrences = pattern.recurring ? 1 : Math.round(pattern.perMonth * density * (0.7 + rng() * 0.6));
       const category = findCategory(pattern.category);
       const sub = findSub(category.id, pattern.subcategory);
 

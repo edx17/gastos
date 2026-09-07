@@ -44,7 +44,7 @@ export default function LoginPage() {
       try {
         user = await client.signIn(DEMO_EMAIL, DEMO_PASSWORD);
       } catch {
-        user = await client.signUp(DEMO_EMAIL, DEMO_PASSWORD, 'Cuenta demo');
+        user = await client.signUp(DEMO_EMAIL, DEMO_PASSWORD, 'Demo');
         await client.seedDemoData?.(user.id);
       }
       await client.signIn(DEMO_EMAIL, DEMO_PASSWORD);

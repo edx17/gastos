@@ -1,6 +1,6 @@
 import { formatMoney, formatPercent } from '@/lib/money';
 import { isWeekend } from '@/lib/date';
-import { round, uid } from '@/lib/utils';
+import { plural, round, uid } from '@/lib/utils';
 import type { AiInsight } from '@/types/ai';
 import type { BudgetProgress } from '@/types/budget';
 import type { CategoryTree } from '@/types/category';
@@ -77,7 +77,7 @@ export function buildInsights(input: InsightInput): AiInsight[] {
     insights.push({
       id: uid(),
       kind: 'recurring',
-      title: `Tenés ${subscriptions.length} gastos recurrentes mensuales`,
+      title: `Tenés ${plural(subscriptions.length, 'gasto recurrente mensual', 'gastos recurrentes mensuales')}`,
       body: `Suman ${money(total)} por mes: ${subscriptions.slice(0, 4).map((r) => r.label).join(', ')}${subscriptions.length > 4 ? ' y otros' : ''}.`,
       severity: 'info',
       evidence: subscriptions.slice(0, 5).map((r) => ({ label: r.label, value: money(r.average_amount) })),
@@ -95,7 +95,7 @@ export function buildInsights(input: InsightInput): AiInsight[] {
         id: uid(),
         kind: 'habit',
         title: `El ${formatPercent(share)} de tus gastos ocurre los fines de semana`,
-        body: `Son ${weekend.length} movimientos por ${money(weekendTotal)} entre sábados y domingos.`,
+        body: `Son ${plural(weekend.length, 'movimiento')} por ${money(weekendTotal)} entre sábados y domingos.`,
         severity: 'info',
         evidence: [
           { label: 'Fin de semana', value: money(weekendTotal) },
@@ -112,7 +112,7 @@ export function buildInsights(input: InsightInput): AiInsight[] {
       id: uid(),
       kind: 'habit',
       title: `Gastos chicos por ${money(ants.total)}`,
-      body: `${ants.count} movimientos de hasta ${money(ants.threshold)} suman ${money(ants.total)}. A este ritmo son ${money(ants.monthly_estimate)} por mes.`,
+      body: `${plural(ants.count, 'movimiento')} de hasta ${money(ants.threshold)} suman ${money(ants.total)}. A este ritmo son ${money(ants.monthly_estimate)} por mes.`,
       severity: 'info',
       evidence: ants.groups.slice(0, 4).map((g) => ({ label: `${g.label} (${g.count})`, value: money(g.total) })),
     });

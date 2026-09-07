@@ -226,9 +226,11 @@ export function antExpenses(rows: Transaction[], from: ISODate, to: ISODate, exp
     return { threshold: explicitThreshold ?? 0, count: 0, total: 0, monthly_estimate: 0, groups: [] };
   }
 
+  // The 35th percentile of the person's own expenses: robust when a handful of
+  // big payments (rent, prepaga) would otherwise drag a median-based cut-off around.
   const amounts = scoped.map((t) => t.base_amount).sort((a, b) => a - b);
-  const median = amounts[Math.floor(amounts.length / 2)];
-  const threshold = round(explicitThreshold ?? Math.max(1000, median * 0.6), 0);
+  const percentile35 = amounts[Math.min(amounts.length - 1, Math.floor(amounts.length * 0.35))];
+  const threshold = round(explicitThreshold ?? Math.max(1000, percentile35), 0);
 
   const ants = scoped.filter((t) => t.base_amount <= threshold);
   const total = round(ants.reduce((acc, t) => acc + t.base_amount, 0), 2);

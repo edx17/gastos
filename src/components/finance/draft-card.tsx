@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { CalendarDays, Check, HelpCircle, Pencil, Sparkles, Store, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, parseAmountInput } from '@/lib/money';
 import { humanDate, today as todayISO } from '@/lib/date';
 import { useWorkspace } from '@/providers/workspace-provider';
 import type { InterpretResult } from '@/services/ai';
@@ -57,8 +57,8 @@ export function DraftCard({
   const categoryChanged = categoryId !== (suggestion.category_id ?? '') || subcategoryId !== (suggestion.subcategory_id ?? '');
   const category = categories.find((c) => c.id === categoryId);
   const subcategory = category?.subcategories.find((s) => s.id === subcategoryId);
-  const parsedAmount = Number(amount.replace(',', '.'));
-  const amountValid = Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const parsedAmount = parseAmountInput(amount) ?? 0;
+  const amountValid = parsedAmount > 0;
   const canSave = amountValid && description.trim().length > 0;
 
   const buildInput = (): TransactionInput => ({

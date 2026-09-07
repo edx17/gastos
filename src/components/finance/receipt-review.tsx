@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { AlertTriangle, Check, Split, Trash2 } from 'lucide-react';
 import { cn, round } from '@/lib/utils';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, parseAmountInput } from '@/lib/money';
 import { useWorkspace } from '@/providers/workspace-provider';
 import type { ReceiptDraft } from '@/hooks/use-receipt';
 import type { ReceiptItemDraft } from '@/types/receipt';
@@ -46,7 +46,9 @@ export function ReceiptReview({
   const [mode, setMode] = React.useState<'single' | 'split'>('single');
   const [merchant, setMerchant] = React.useState(parsed.merchant ?? '');
   const [date, setDate] = React.useState(parsed.date ?? new Date().toISOString().slice(0, 10));
-  const [total, setTotal] = React.useState(parsed.total !== null ? String(parsed.total) : '');
+  const [total, setTotal] = React.useState(
+    parsed.total !== null ? formatMoney(parsed.total, { withSymbol: false, compactDecimals: false }) : '',
+  );
   const [categoryId, setCategoryId] = React.useState(() => dominantCategory(draft.items) ?? '');
   const [subcategoryId, setSubcategoryId] = React.useState('');
   const [paymentMethodId, setPaymentMethodId] = React.useState(
@@ -54,8 +56,8 @@ export function ReceiptReview({
   );
 
   const category = categories.find((c) => c.id === categoryId);
-  const parsedTotal = Number(total.replace(',', '.'));
-  const totalValid = Number.isFinite(parsedTotal) && parsedTotal > 0;
+  const parsedTotal = parseAmountInput(total) ?? 0;
+  const totalValid = parsedTotal > 0;
 
   const distribution = React.useMemo(() => {
     const buckets = new Map<string, { name: string; color: string; total: number }>();
@@ -209,9 +211,9 @@ export function ReceiptReview({
                   aria-label="Descripción del producto"
                 />
                 <Input
-                  value={String(item.total)}
+                  defaultValue={formatMoney(item.total, { withSymbol: false, compactDecimals: false })}
                   inputMode="decimal"
-                  onChange={(event) => updateItem(index, { total: Number(event.target.value.replace(',', '.')) || 0 })}
+                  onChange={(event) => updateItem(index, { total: parseAmountInput(event.target.value) ?? 0 })}
                   className="h-9 w-28 text-right"
                   aria-label="Importe del producto"
                 />

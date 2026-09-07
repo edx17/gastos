@@ -175,8 +175,10 @@ function lastAmount(line: string): number | null {
   return value === null ? null : round(value, 2);
 }
 
+// "LECHE 2 x 1.800,00 3.600,00" y también "INFINIA 28,45 LT x 1.230,00 34.993,50".
+const UNITS = String.raw`(?:lt|ltr?|l|kg|k|gr?|g|ml|cc|un|u|uni|und|c\/u|x\s?kg)?`;
 const ITEM_WITH_QTY = new RegExp(
-  String.raw`^(?<desc>.+?)\s+(?<qty>\d{1,4}(?:[.,]\d{1,3})?)\s*[x×*]\s*(?<unit>${MONEY})\s+(?<total>${MONEY})$`,
+  String.raw`^(?<desc>.+?)\s+(?<qty>\d{1,4}(?:[.,]\d{1,3})?)\s*${UNITS}\s*[x×*]\s*(?<unit>${MONEY})\s+(?<total>${MONEY})$`,
   'i',
 );
 const ITEM_SIMPLE = new RegExp(String.raw`^(?<desc>.+?)\s+(?<total>${MONEY})$`);

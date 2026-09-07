@@ -5,6 +5,10 @@
  * `35 mil`, `1 palo`, `tres lucas`, `$1.500.000`.
  */
 
+import { parseNumericLiteral } from '@/lib/money';
+
+export { parseNumericLiteral };
+
 export const MULTIPLIERS: Record<string, number> = {
   k: 1_000,
   mil: 1_000,
@@ -33,35 +37,6 @@ const UNITS: Record<string, number> = {
 };
 
 const SCALES: Record<string, number> = { mil: 1_000, millon: 1_000_000, millones: 1_000_000 };
-
-/**
- * Reads a numeric literal the Argentine way: `.` groups thousands, `,` is the decimal
- * separator. A lone dot followed by exactly three digits is a thousands separator
- * (`3.200` = 3200), otherwise it is a decimal point (`3.20` = 3.2).
- */
-export function parseNumericLiteral(literal: string): number | null {
-  const cleaned = literal.replace(/\s/g, '');
-  if (!/\d/.test(cleaned)) return null;
-
-  const hasComma = cleaned.includes(',');
-  const hasDot = cleaned.includes('.');
-
-  let normalized = cleaned;
-  if (hasComma && hasDot) {
-    normalized = cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.')
-      ? cleaned.replace(/\./g, '').replace(',', '.')
-      : cleaned.replace(/,/g, '');
-  } else if (hasComma) {
-    normalized = cleaned.replace(',', '.');
-  } else if (hasDot) {
-    const parts = cleaned.split('.');
-    const looksLikeThousands = parts.length > 2 || parts[parts.length - 1].length === 3;
-    normalized = looksLikeThousands ? parts.join('') : cleaned;
-  }
-
-  const value = Number(normalized);
-  return Number.isFinite(value) ? value : null;
-}
 
 /** `tres lucas`, `dos mil quinientos`, `medio palo` → number. */
 export function wordsToNumber(words: string[]): number | null {

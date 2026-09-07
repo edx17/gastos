@@ -41,6 +41,9 @@ export function detectRecurring(rows: Transaction[], userId: string): RecurringE
     const avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
     const cadence = CADENCES.find((c) => avgGap >= c.min && avgGap <= c.max);
     if (!cadence) continue;
+    // Two purchases days apart and one months later average into a plausible
+    // cadence without being recurring at all: every gap has to fit the pattern.
+    if (gaps.some((gap) => Math.abs(gap - avgGap) > Math.max(3, avgGap * 0.4))) continue;
 
     const amounts = sorted.map((t) => t.base_amount);
     const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length;

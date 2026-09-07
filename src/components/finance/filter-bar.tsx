@@ -19,10 +19,12 @@ export function FilterBar({
   filters,
   onChange,
   showSearch = true,
+  showSort = true,
 }: {
   filters: TransactionFilters;
   onChange: (filters: TransactionFilters) => void;
   showSearch?: boolean;
+  showSort?: boolean;
 }) {
   const { categories, paymentMethods } = useWorkspace();
   const [open, setOpen] = React.useState(false);
@@ -53,6 +55,7 @@ export function FilterBar({
             aria-label="Buscar movimientos"
           />
         ) : null}
+        {showSort ? (
         <Select
           className="w-auto"
           value={filters.sort ?? 'date_desc'}
@@ -64,6 +67,7 @@ export function FilterBar({
           <option value="amount_desc">Mayor importe</option>
           <option value="amount_asc">Menor importe</option>
         </Select>
+        ) : null}
         <Button variant={activeCount ? 'default' : 'outline'} size="sm" onClick={() => setOpen((value) => !value)}>
           <Filter className="h-4 w-4" />
           Filtros{activeCount ? ` (${activeCount})` : ''}

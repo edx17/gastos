@@ -67,6 +67,11 @@ export function debounce<A extends unknown[]>(fn: (...args: A) => void, ms = 250
   };
 }
 
+/** "1 movimiento" / "3 movimientos" — small detail, but the copy reads written by a person. */
+export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}
+
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

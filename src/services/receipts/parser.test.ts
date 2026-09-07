@@ -84,3 +84,19 @@ TOTAL A PAGAR 1.500,00`);
     expect(parseReceiptText('DUTY FREE\nPERFUME U$S 120,00\nTOTAL U$S 120,00').currency).toBe('USD');
   });
 });
+
+describe('unit-priced lines', () => {
+  it('separates the product from the quantity when a unit is written in between', () => {
+    const result = parseReceiptText(`YPF FULL
+07/09/2026
+INFINIA NAFTA     28,45 LT x 1.230,00   34.993,50
+TOTAL                                   34.993,50`);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      description: 'Infinia Nafta',
+      quantity: 28.45,
+      unit_price: 1230,
+      total: 34993.5,
+    });
+  });
+});
