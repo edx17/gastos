@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 150 20% 98%;
+    --foreground: 190 25% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 190 25% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 190 25% 12%;
+    --primary: 172 66% 28%;
+    --primary-foreground: 150 40% 98%;
+    --secondary: 165 25% 94%;
+    --secondary-foreground: 175 40% 20%;
+    --muted: 160 16% 95%;
+    --muted-foreground: 190 10% 42%;
+    --accent: 168 45% 92%;
+    --accent-foreground: 175 45% 22%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 38 92% 46%;
+    --warning-foreground: 30 60% 12%;
+    --success: 152 60% 34%;
+    --success-foreground: 0 0% 100%;
+    --border: 165 16% 88%;
+    --input: 165 16% 88%;
+    --ring: 172 66% 32%;
+    --radius: 0.85rem;
+  }
+
+  .dark {
+    --background: 195 30% 7%;
+    --foreground: 160 20% 96%;
+    --card: 195 27% 10%;
+    --card-foreground: 160 20% 96%;
+    --popover: 195 27% 10%;
+    --popover-foreground: 160 20% 96%;
+    --primary: 166 60% 45%;
+    --primary-foreground: 195 40% 8%;
+    --secondary: 195 20% 16%;
+    --secondary-foreground: 160 20% 94%;
+    --muted: 195 20% 15%;
+    --muted-foreground: 175 12% 65%;
+    --accent: 190 25% 18%;
+    --accent-foreground: 160 30% 92%;
+    --destructive: 0 62% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 38 88% 55%;
+    --warning-foreground: 30 60% 10%;
+    --success: 152 52% 45%;
+    --success-foreground: 195 40% 8%;
+    --border: 195 18% 20%;
+    --input: 195 18% 22%;
+    --ring: 166 60% 45%;
+  }
+
+  * { @apply border-border; }
+  html { -webkit-tap-highlight-color: transparent; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv02','cv03','cv04','tnum';
+  }
+  ::selection { @apply bg-primary/20; }
+}
+
+@layer components {
+  .card-surface {
+    @apply rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(16,24,40,.04),0_8px_24px_-16px_rgba(16,24,40,.18)];
+  }
+  .num { @apply font-numeric tabular-nums tracking-tight; }
+  .scrollbar-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { @apply rounded-full bg-border; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
