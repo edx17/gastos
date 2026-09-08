@@ -78,9 +78,14 @@ supabase db push
 
 El `project-ref` es la parte del medio de la URL: `https://<ref>.supabase.co`.
 
-**Opción B — a mano, sin instalar nada:** en el panel de Supabase, **SQL Editor →
-New query**, y pegá y ejecutá el contenido de cada archivo de `supabase/migrations/`
-**en orden numérico**, empezando por `…000001_`. Son siete archivos.
+**Opción B — a mano, sin instalar nada:** generá un único archivo con todas las
+migraciones y pegalo de una sola vez en **SQL Editor → New query**:
+
+```powershell
+node scripts/bundle-migrations.mjs > crocante-migraciones.sql
+```
+
+Se puede ejecutar más de una vez sin romper nada: las migraciones son idempotentes.
 
 ### 3.3 Conectar la app
 
