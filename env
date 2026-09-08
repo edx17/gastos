@@ -1,0 +1,29 @@
+# ---------------------------------------------------------------------------
+# Crocante · configuración local
+# Guardar este archivo como  .env  en la raíz del proyecto (junto a package.json).
+# Ya está en .gitignore: no se sube al repositorio.
+# ---------------------------------------------------------------------------
+
+# --- Supabase --------------------------------------------------------------
+VITE_SUPABASE_URL=https://tyngkrdwfpbvmdrgzvbf.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5bmdrcmR3ZnBidm1kcmd6dmJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NDQ4NDYsImV4cCI6MjEwNDQyMDg0Nn0.QeuHc1Qzoew5az9VgbwkK7nCrepvpwWA0wK_LyAhg-4
+
+# La clave service_role NO va acá ni en Vercel: sirve para saltearse toda la
+# seguridad de la base. Sólo se usa desde un servidor, y esta app no la necesita.
+
+# --- Moneda ----------------------------------------------------------------
+VITE_BASE_CURRENCY=ARS
+
+# --- IA y OCR --------------------------------------------------------------
+# "mock" = el motor propio de Crocante, sin llamar a ningún modelo externo.
+# Interpreta "super 45 lucas" perfectamente y no cuesta nada.
+# Cambiar a openai / anthropic / gemini recién cuando despliegues las Edge
+# Functions con las claves (ver docs/DEPLOY.md).
+VITE_AI_PROVIDER=mock
+VITE_OCR_PROVIDER=mock
+
+# Cuando uses un proveedor real, esto hace que las claves queden en el servidor.
+VITE_USE_EDGE_FUNCTIONS=true
+
+# Tamaño máximo de la foto del ticket, en MB.
+VITE_MAX_RECEIPT_MB=8
