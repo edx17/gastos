@@ -5,8 +5,16 @@ dist-ssr
 .env
 .env.*
 !.env.example
+# También sin el punto: es fácil guardarlo así sin querer y publicar las claves.
+env
+env.*
+*.env
 .DS_Store
 coverage
 .vite
 *.log
 supabase/.temp
+# El bundle de migraciones se genera; no va al repo ni, sobre todo, dentro de
+# supabase/migrations (Supabase intentaría aplicarlo como una migración más).
+crocante-migraciones.sql
+crocantemigraciones.sql

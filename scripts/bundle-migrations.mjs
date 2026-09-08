@@ -9,7 +9,16 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const dir = fileURLToPath(new URL('../supabase/migrations', import.meta.url));
-const files = (await readdir(dir)).filter((name) => name.endsWith('.sql')).sort();
+// Sólo migraciones numeradas: así el bundle no se incluye a sí mismo si alguien
+// lo dejó dentro de la carpeta.
+const files = (await readdir(dir))
+  .filter((name) => /^\d{14}_.+\.sql$/.test(name))
+  .sort();
+
+if (!files.length) {
+  console.error('No encontré migraciones en supabase/migrations.');
+  process.exit(1);
+}
 
 const parts = [
   `-- Crocante · todas las migraciones en orden`,
