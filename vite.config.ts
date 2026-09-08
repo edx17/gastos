@@ -8,35 +8,74 @@ import path from 'node:path';
  * esa versión. Este aviso lo grita en el registro del deploy, que es donde uno
  * lo puede ver a tiempo.
  */
-function warnMissingBackendEnv(env: Record<string, string>): Plugin {
+function warnMissingBackendEnv(backend: { url: string; anonKey: string }): Plugin {
   return {
     name: 'crocante:warn-missing-backend-env',
     apply: 'build',
     buildStart() {
-      const missing = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'].filter((key) => !env[key]?.trim());
+      const missing = [
+        !backend.url && 'la URL del proyecto',
+        !backend.anonKey && 'la clave anon',
+      ].filter(Boolean);
       if (!missing.length) return;
 
       const line = '─'.repeat(70);
       console.warn(
         `\n\x1b[33m${line}\n` +
           '  ATENCIÓN: se está compilando SIN backend.\n' +
-          `  Faltan: ${missing.join(', ')}\n\n` +
+          `  Falta: ${missing.join(' y ')}\n\n` +
           '  La aplicación va a arrancar en MODO DEMO: los datos quedan en el\n' +
           '  navegador de cada visitante y no hay acceso con Google.\n\n' +
           '  Si esto es un despliegue de verdad, cargá esas variables en el\n' +
-          '  proveedor (en Vercel: Settings → Environment Variables, marcando\n' +
-          '  Production) y volvé a desplegar: agregarlas no alcanza, hay que\n' +
-          '  compilar de nuevo.\n' +
+          '  Cargá VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en el proveedor\n' +
+          '  (en Vercel: Settings → Environment Variables, marcando Production)\n' +
+          '  y volvé a desplegar: agregarlas no alcanza, hay que compilar de\n' +
+          '  nuevo. También se aceptan SUPABASE_URL y SUPABASE_ANON_KEY, que es\n' +
+          '  como las deja la integración de Supabase con Vercel.\n' +
           `${line}\x1b[0m\n`,
       );
     },
   };
 }
 
+/**
+ * La integración oficial de Supabase con Vercel deja las credenciales con
+ * nombres pensados para Next.js (`SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`).
+ * Vite sólo expone lo que empieza con `VITE_`, así que se aceptan esos nombres
+ * como alternativa: quien ya tenga la integración no necesita duplicar nada.
+ */
+function resolveBackendEnv(env: Record<string, string>) {
+  const pick = (...keys: string[]) => keys.map((key) => env[key]?.trim()).find(Boolean) ?? '';
+
+  const url = pick('VITE_SUPABASE_URL', 'SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
+  const anonKey = pick(
+    'VITE_SUPABASE_ANON_KEY',
+    'SUPABASE_ANON_KEY',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_PUBLISHABLE_KEY',
+    'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+  );
+
+  const source = env.VITE_SUPABASE_URL?.trim() ? 'variables VITE_*' : url ? 'integración de Supabase' : 'ninguna';
+  return { url, anonKey, source };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  const backend = resolveBackendEnv(env);
+
+  if (backend.url) {
+    console.log(`\x1b[36m  Backend: ${backend.url} (tomado de ${backend.source})\x1b[0m`);
+  }
+
   return {
-  plugins: [react(), warnMissingBackendEnv(env)],
+  plugins: [react(), warnMissingBackendEnv(backend)],
+    // Se fijan explícitamente para que valgan también cuando vienen de la
+    // integración, que no usa el prefijo VITE_.
+    define: {
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(backend.url),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(backend.anonKey),
+    },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },

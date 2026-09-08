@@ -68,7 +68,7 @@ Están todas documentadas en [`.env.example`](.env.example). Las importantes:
 
 | Variable | Para qué |
 | --- | --- |
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Backend real. Si faltan, modo demo. |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Backend real. Si faltan, modo demo. También se aceptan `SUPABASE_URL` / `SUPABASE_ANON_KEY`, como los deja la integración de Supabase con Vercel. |
 | `VITE_BASE_CURRENCY` | Moneda principal por defecto (`ARS`). |
 | `VITE_AI_PROVIDER` | `mock` \| `openai` \| `anthropic` \| `gemini`. |
 | `VITE_OCR_PROVIDER` | `mock` \| `ocrspace` \| `google_vision` \| `azure_vision` \| `openai_vision` \| `gemini_vision`. |
