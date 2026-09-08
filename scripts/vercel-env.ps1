@@ -8,12 +8,13 @@
   copiarlas a mano ni tildar casillas de a una.
 
   Sólo sube las que empiezan con VITE_ (las que van al navegador). Cualquier
-  otra cosa que tengas en el .env se ignora a propósito.
+  otra cosa que tengas en el .env se ignora a propósito: las claves secretas
+  viven en Supabase, no acá.
 
 .EXAMPLE
   npm i -g vercel
   vercel login
-  vercel link
+  vercel link            # sin argumentos: enlaza esta carpeta
   .\scripts\vercel-env.ps1
   vercel --prod
 #>
@@ -24,44 +25,73 @@ param(
   [string]$Archivo = '.env'
 )
 
-$ErrorActionPreference = 'Stop'
+# Los comandos de Vercel devuelven códigos de salida que se manejan a mano más
+# abajo; sin esto, PowerShell 7 corta el script en el primer `env rm` de una
+# variable que todavía no existe.
+$ErrorActionPreference = 'Continue'
+if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
+  $PSNativeCommandUseErrorActionPreference = $false
+}
 
 if (-not (Test-Path $Archivo)) {
-  Write-Error "No encontré $Archivo. Guardalo en la raíz del proyecto y volvé a intentar."
+  Write-Host "No encontré $Archivo en esta carpeta." -ForegroundColor Red
+  Write-Host "Guardalo en la raíz del proyecto (al lado de package.json) y probá de nuevo."
+  exit 1
 }
 
 if (-not (Get-Command vercel -ErrorAction SilentlyContinue)) {
-  Write-Error "Falta la CLI de Vercel. Instalala con:  npm i -g vercel"
+  Write-Host "Falta la CLI de Vercel. Instalala con:  npm i -g vercel" -ForegroundColor Red
+  exit 1
+}
+
+if (-not (Test-Path '.vercel/project.json')) {
+  Write-Host "Esta carpeta todavía no está enlazada a un proyecto de Vercel." -ForegroundColor Red
+  Write-Host "Corré primero:  vercel link    (sin argumentos, te va a preguntar cuál)"
+  exit 1
 }
 
 $subidas = 0
+$fallidas = 0
 
-Get-Content $Archivo | ForEach-Object {
-  $linea = $_.Trim()
+foreach ($linea in Get-Content $Archivo) {
+  $texto = $linea.Trim()
 
   # Saltear comentarios y líneas vacías.
-  if ($linea -eq '' -or $linea.StartsWith('#')) { return }
-  if (-not $linea.Contains('=')) { return }
+  if ($texto -eq '' -or $texto.StartsWith('#') -or -not $texto.Contains('=')) { continue }
 
-  $nombre = $linea.Substring(0, $linea.IndexOf('=')).Trim()
-  $valor  = $linea.Substring($linea.IndexOf('=') + 1).Trim()
+  $corte = $texto.IndexOf('=')
+  $nombre = $texto.Substring(0, $corte).Trim()
+  $valor = $texto.Substring($corte + 1).Trim()
 
-  # Sólo las del navegador: las secretas viven en Supabase, no acá.
-  if (-not $nombre.StartsWith('VITE_')) { return }
+  # Sólo las del navegador.
+  if (-not $nombre.StartsWith('VITE_')) { continue }
   if ($valor -eq '') {
     Write-Host "  (vacía, se saltea) $nombre" -ForegroundColor DarkGray
-    return
+    continue
   }
 
-  # Si ya existe hay que quitarla antes: Vercel no la pisa sola.
-  vercel env rm $nombre $Entorno --yes 2>$null | Out-Null
+  # Si ya existe hay que quitarla antes: Vercel no la pisa sola. Que no exista
+  # es lo normal la primera vez, así que el error de acá se ignora.
+  vercel env rm $nombre $Entorno --yes 2>&1 | Out-Null
 
-  $valor | vercel env add $nombre $Entorno | Out-Null
-  Write-Host "  cargada  $nombre" -ForegroundColor Green
-  $script:subidas++
+  $valor | vercel env add $nombre $Entorno 2>&1 | Out-Null
+
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "  cargada   $nombre" -ForegroundColor Green
+    $subidas++
+  } else {
+    Write-Host "  FALLÓ     $nombre" -ForegroundColor Red
+    $fallidas++
+  }
 }
 
 Write-Host ""
-Write-Host "$subidas variables cargadas en el entorno '$Entorno'." -ForegroundColor Cyan
-Write-Host "Ahora falta volver a compilar, si no el deploy viejo sigue sin ellas:" -ForegroundColor Yellow
+if ($fallidas -gt 0) {
+  Write-Host "$subidas cargadas, $fallidas con error." -ForegroundColor Yellow
+  Write-Host "Probá cargando las que fallaron desde el panel de Vercel."
+} else {
+  Write-Host "$subidas variables cargadas en el entorno '$Entorno'." -ForegroundColor Cyan
+}
+Write-Host ""
+Write-Host "Falta volver a compilar, si no el deploy anterior sigue sin ellas:" -ForegroundColor Yellow
 Write-Host "  vercel --prod" -ForegroundColor Yellow
