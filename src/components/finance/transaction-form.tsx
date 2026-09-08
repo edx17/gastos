@@ -6,7 +6,7 @@ import { parseAmountInput } from '@/lib/money';
 import type { CurrencyCode } from '@/types/currency';
 import type { Transaction, TransactionInput, TransactionType } from '@/types/transaction';
 import { Button } from '@/components/ui/button';
-import { Input, Label, Select, Textarea } from '@/components/ui/input';
+import { Input, Label, Select, Switch, Textarea } from '@/components/ui/input';
 import { CurrencySelector } from './currency-selector';
 
 const TYPES: { value: TransactionType; label: string }[] = [
@@ -31,7 +31,7 @@ export function TransactionForm({
   submitLabel?: string;
   saving?: boolean;
 }) {
-  const { categories, paymentMethods, profile, rules, history } = useWorkspace();
+  const { categories, paymentMethods, profile, rules, history, household, householdMembers } = useWorkspace();
 
   const [type, setType] = React.useState<TransactionType>((initial?.type as TransactionType) ?? 'expense');
   const [amount, setAmount] = React.useState(initial?.amount ? String(initial.amount) : '');
@@ -46,6 +46,10 @@ export function TransactionForm({
   );
   const [notes, setNotes] = React.useState(initial?.notes ?? '');
   const [touchedCategory, setTouchedCategory] = React.useState(Boolean(initial?.category_id));
+  const [shared, setShared] = React.useState(Boolean(initial?.household_id));
+  const [paidBy, setPaidBy] = React.useState(
+    initial?.paid_by ?? householdMembers.find((member) => member.user_id)?.id ?? householdMembers[0]?.id ?? '',
+  );
 
   const category = categories.find((c) => c.id === categoryId);
   const parsedAmount = parseAmountInput(amount);
@@ -79,6 +83,8 @@ export function TransactionForm({
           payment_method_id: paymentMethodId || null,
           notes: notes.trim() || null,
           source: initial?.source ?? 'manual',
+          household_id: shared && household ? household.id : null,
+          paid_by: shared && paidBy ? paidBy : null,
         });
       }}
     >
@@ -184,6 +190,33 @@ export function TransactionForm({
           ))}
         </Select>
       </div>
+
+      {household ? (
+        <div className="space-y-3 rounded-md bg-accent/40 p-3 sm:col-span-2">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Gasto de {household.name}</p>
+              <p className="text-xs text-muted-foreground">
+                Entra en el balance compartido en vez de contar sólo para vos.
+              </p>
+            </div>
+            <Switch checked={shared} onCheckedChange={setShared} />
+          </div>
+          {shared ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="tx-paid-by">Lo pagó</Label>
+              <Select id="tx-paid-by" value={paidBy} onChange={(event) => setPaidBy(event.target.value)}>
+                <option value="">Sin especificar</option>
+                {householdMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.display_name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="space-y-1.5 sm:col-span-2">
         <Label htmlFor="tx-notes">Notas</Label>

@@ -32,9 +32,9 @@ import type {
   TransactionInput,
   TransactionItem,
 } from '@/types/transaction';
-import type { AuthUser, Household, HouseholdMember, Profile } from '@/types/user';
+import type { AuthUser, Household, HouseholdBalance, HouseholdMember, Profile } from '@/types/user';
 import { formatMonthLabel } from '@/lib/date';
-import { budgetStatus, projectGoal } from './local';
+import { MEMBER_COLORS, budgetStatus, projectGoal } from './local';
 import { describeDbError, getSupabase } from './supabase-client';
 import type { DataClient, DateRangeInput } from './types';
 
@@ -171,9 +171,72 @@ export class SupabaseDataClient implements DataClient {
       user_id: userId,
       role: 'owner',
       display_name: profile.display_name,
+      color: MEMBER_COLORS[0],
       share: 0.5,
     });
     return data as Household;
+  }
+
+  async updateHousehold(id: UUID, patch: Partial<Household>): Promise<Household> {
+    const { data, error } = await this.db.from('households').update(patch).eq('id', id).select().single();
+    if (error) throw dbError(error);
+    return data as Household;
+  }
+
+  async addHouseholdMember(
+    householdId: UUID,
+    input: { display_name: string; invite_email?: string | null; share?: number; color?: string },
+  ): Promise<HouseholdMember> {
+    const { count } = await this.db
+      .from('household_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('household_id', householdId);
+
+    const { data, error } = await this.db
+      .from('household_members')
+      .insert({
+        household_id: householdId,
+        // Queda sin cuenta asociada hasta que la persona se registre con ese email.
+        user_id: null,
+        role: 'member',
+        display_name: input.display_name,
+        invite_email: input.invite_email ?? null,
+        color: input.color ?? MEMBER_COLORS[(count ?? 0) % MEMBER_COLORS.length],
+        share: input.share ?? 0.5,
+      })
+      .select()
+      .single();
+    if (error) throw dbError(error);
+    return data as HouseholdMember;
+  }
+
+  async updateHouseholdMember(id: UUID, patch: Partial<HouseholdMember>): Promise<HouseholdMember> {
+    const { data, error } = await this.db.from('household_members').update(patch).eq('id', id).select().single();
+    if (error) throw dbError(error);
+    return data as HouseholdMember;
+  }
+
+  async removeHouseholdMember(id: UUID): Promise<void> {
+    const { error } = await this.db.from('household_members').delete().eq('id', id);
+    if (error) throw dbError(error);
+  }
+
+  async getHouseholdBalance(householdId: UUID, range: DateRangeInput): Promise<HouseholdBalance[]> {
+    const { data, error } = await this.db.rpc('household_balance', {
+      p_household: householdId,
+      p_from: range.from,
+      p_to: range.to,
+    });
+    if (error) throw dbError(error);
+    return ((data ?? []) as any[]).map((row) => ({
+      member_id: row.member_id,
+      display_name: row.display_name,
+      color: row.color ?? MEMBER_COLORS[0],
+      share: Number(row.share),
+      paid: round(Number(row.paid), 2),
+      owed: round(Number(row.owed), 2),
+      balance: round(Number(row.balance), 2),
+    }));
   }
 
   // ---------------------------------------------------------- categories

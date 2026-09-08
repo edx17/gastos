@@ -17,7 +17,7 @@ export function Tabs<T extends string>({
   return (
     <div
       role="tablist"
-      className={cn('inline-flex flex-wrap items-center gap-1 rounded-lg bg-muted p-1', className)}
+      className={cn('clay-inset inline-flex flex-wrap items-center gap-1 rounded-full p-1.5', className)}
     >
       {items.map((item) => (
         <button
@@ -26,10 +26,10 @@ export function Tabs<T extends string>({
           aria-selected={value === item.value}
           onClick={() => onChange(item.value)}
           className={cn(
-            'rounded-md font-medium transition-colors',
-            size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',
+            'rounded-full font-medium transition-all',
+            size === 'sm' ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm',
             value === item.value
-              ? 'bg-card text-foreground shadow-sm'
+              ? 'clay-sm bg-card text-foreground'
               : 'text-muted-foreground hover:text-foreground',
           )}
         >

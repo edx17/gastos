@@ -28,7 +28,8 @@ en toda la aplicación.
 | Multimoneda ARS / USD / EUR (guarda importe original y conversión) | ✅ |
 | Importación CSV con mapeo de columnas y detección de duplicados | ✅ |
 | Calendario financiero y buscador global | ✅ |
-| Modo pareja / hogar | 🧱 esquema, tipos y RLS listos; falta la interfaz |
+| Interfaz claymorphism, con modo claro y oscuro | ✅ |
+| Modo pareja / hogar: gastos compartidos, quién pagó y balance | ✅ |
 
 ---
 
@@ -93,6 +94,7 @@ supabase db push          # aplica supabase/migrations/*.sql en orden
 | `…_functions.sql` | Alta de cuenta, reportes agregados en SQL, alertas de presupuesto. |
 | `…_storage.sql` | Bucket privado `receipts` y sus policies. |
 | `…_demo_seed.sql` | `seed_demo_data()` para poblar una cuenta de prueba. |
+| `…_household_members.sql` | Modo hogar: miembros sin cuenta propia y `household_balance()`. |
 
 Si tocás la taxonomía de categorías, regenerá el SQL en vez de editarlo a mano:
 
@@ -200,7 +202,7 @@ src/
 
 Rutas: `/`, `/login`, `/register`, `/forgot-password`, y bajo `/app`:
 `dashboard`, `transactions`, `reports`, `categories`, `budgets`, `goals`,
-`receipts`, `calendar`, `ask`, `settings`.
+`receipts`, `calendar`, `ask`, `household`, `settings`.
 
 ---
 
@@ -230,6 +232,8 @@ node smoke.mjs ./capturas   # recorrido end-to-end real con Playwright
 - **Dinero**: formato argentino, conversión entre monedas, parseo de importes.
 - **Analíticas**: resúmenes, comparativas, series, gastos hormiga y recurrentes.
 - **Importación CSV**: separadores, comillas, duplicados y filas inválidas.
+- **Modo hogar**: reparto por partes desiguales, gastos sin atribuir y las
+  transferencias mínimas para quedar a mano.
 - **Dataset de demostración**: coherencia y determinismo.
 
 El SQL se verifica aparte con `scripts/verify-sql.sh` (incluye pruebas de RLS).
@@ -260,6 +264,15 @@ herramientas en Windows, crear el proyecto de Supabase, aplicar las migraciones,
 configurar IA y OCR, y publicar en Vercel.
 
 ---
+
+## Identidad visual
+
+La interfaz usa **claymorphism**: superficies blandas con doble sombra —una cálida
+hacia afuera, una luz hacia adentro— sobre un fondo levemente teñido. Los campos de
+texto están hundidos, los botones sobresalen y se hunden al presionarlos. Todo sale de
+tres variables en `src/index.css` (`--clay-shadow`, `--clay-light`, `--clay-depth`) más
+`--radius`: tocando eso cambia el carácter de toda la app, y hay un juego de valores
+para el modo oscuro.
 
 ## Decisiones que vale la pena conocer
 

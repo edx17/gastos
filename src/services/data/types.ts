@@ -22,7 +22,7 @@ import type {
   TransactionInput,
   TransactionItem,
 } from '@/types/transaction';
-import type { AuthUser, Household, HouseholdMember, Profile } from '@/types/user';
+import type { AuthUser, Household, HouseholdBalance, HouseholdMember, Profile } from '@/types/user';
 
 export interface DateRangeInput {
   from: string;
@@ -54,6 +54,14 @@ export interface DataClient {
   listHouseholds(userId: UUID): Promise<Household[]>;
   listHouseholdMembers(householdId: UUID): Promise<HouseholdMember[]>;
   createHousehold(userId: UUID, name: string): Promise<Household>;
+  updateHousehold(id: UUID, patch: Partial<Household>): Promise<Household>;
+  addHouseholdMember(
+    householdId: UUID,
+    input: { display_name: string; invite_email?: string | null; share?: number; color?: string },
+  ): Promise<HouseholdMember>;
+  updateHouseholdMember(id: UUID, patch: Partial<HouseholdMember>): Promise<HouseholdMember>;
+  removeHouseholdMember(id: UUID): Promise<void>;
+  getHouseholdBalance(householdId: UUID, range: DateRangeInput): Promise<HouseholdBalance[]>;
 
   // Categories
   listCategories(userId: UUID): Promise<CategoryTree[]>;

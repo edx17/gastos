@@ -17,7 +17,7 @@ export function AiInsightCard({ insight }: { insight: Insight }) {
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+            'clay-sm flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
             insight.severity === 'positive' && 'bg-success/12 text-success',
             insight.severity === 'warning' && 'bg-warning/15 text-warning',
             insight.severity === 'info' && 'bg-primary/10 text-primary',

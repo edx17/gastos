@@ -17,6 +17,7 @@ import {
   Sun,
   Tags,
   Target,
+  Users,
   Wallet,
   X,
 } from 'lucide-react';
@@ -42,6 +43,7 @@ const NAV = [
   { to: '/app/receipts', label: 'Tickets', icon: Receipt },
   { to: '/app/calendar', label: 'Calendario', icon: CalendarDays },
   { to: '/app/ask', label: 'Preguntar', icon: MessagesSquare },
+  { to: '/app/household', label: 'Hogar', icon: Users },
 ];
 
 const MOBILE_NAV = [
@@ -84,7 +86,7 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-full bg-background">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border bg-card px-3 py-4 lg:flex">
+      <aside className="clay-panel fixed inset-y-0 left-0 z-30 hidden w-60 flex-col px-3 py-4 lg:flex">
         <div className="px-2">
           <Logo />
         </div>
@@ -98,7 +100,7 @@ export function AppShell() {
             <SidebarLink key={item.to} {...item} />
           ))}
         </nav>
-        <div className="space-y-1 border-t border-border pt-3">
+        <div className="space-y-1 pt-3">
           <SidebarLink to="/app/settings" label="Ajustes" icon={Settings} />
           <button
             onClick={() => signOut().then(() => navigate('/login'))}
@@ -111,7 +113,7 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-h-full w-full flex-col lg:pl-60">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-background/80 px-4 backdrop-blur-md">
           <Button
             variant="ghost"
             size="icon-sm"
@@ -127,11 +129,11 @@ export function AppShell() {
 
           <button
             onClick={() => setSearchOpen(true)}
-            className="ml-auto flex h-9 items-center gap-2 rounded-full border border-border bg-card px-3 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-72 sm:justify-start"
+            className="clay-inset ml-auto flex h-10 items-center gap-2 rounded-full px-4 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-72 sm:justify-start"
           >
             <Search className="h-4 w-4" />
             <span className="hidden sm:inline">Buscar movimientos…</span>
-            <kbd className="ml-auto hidden rounded border border-border px-1.5 text-[10px] sm:inline">⌘K</kbd>
+            <kbd className="clay-sm ml-auto hidden rounded-full px-2 py-0.5 text-[10px] sm:inline">⌘K</kbd>
           </button>
 
           <Button
@@ -170,7 +172,7 @@ export function AppShell() {
       </div>
 
       {/* Mobile bottom navigation with the primary action in the middle. */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <nav className="clay fixed inset-x-0 bottom-0 z-30 rounded-b-none rounded-t-[1.75rem] bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         <div className="grid grid-cols-5 items-center">
           {MOBILE_NAV.slice(0, 2).map((item) => (
             <BottomLink key={item.to} {...item} />
@@ -178,7 +180,7 @@ export function AppShell() {
           <div className="flex justify-center">
             <button
               onClick={() => setQuickAddOpen(true)}
-              className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-95"
+              className="clay-tinted clay-press -mt-7 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform"
               aria-label="Agregar movimiento"
             >
               <Plus className="h-6 w-6" />
@@ -193,7 +195,7 @@ export function AppShell() {
       {menuOpen ? (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-foreground/30" onClick={() => setMenuOpen(false)} />
-          <div className="relative flex h-full w-72 flex-col bg-card p-4 shadow-xl animate-slide-up">
+          <div className="clay relative flex h-full w-72 flex-col rounded-l-none p-4 animate-slide-up">
             <div className="flex items-center justify-between">
               <Logo />
               <Button variant="ghost" size="icon-sm" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú">
@@ -232,8 +234,10 @@ function SidebarLink({ to, label, icon: Icon }: { to: string; label: string; ico
       to={to}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
+          'flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition-all',
+          isActive
+            ? 'clay-sm bg-card text-primary'
+            : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
         )
       }
     >
@@ -249,7 +253,7 @@ function BottomLink({ to, label, icon: Icon }: { to: string; label: string; icon
       to={to}
       className={({ isActive }) =>
         cn(
-          'flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors',
+          'flex flex-col items-center gap-1 py-3 text-[11px] font-medium transition-colors',
           isActive ? 'text-primary' : 'text-muted-foreground',
         )
       }

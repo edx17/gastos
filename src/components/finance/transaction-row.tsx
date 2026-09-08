@@ -27,12 +27,12 @@ export function TransactionRow({
     <button
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-0 hover:bg-accent/50',
-        highlighted && 'bg-accent',
+        'flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-accent/50',
+        highlighted && 'clay-inset bg-accent',
       )}
     >
       <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+        className="clay-sm flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
         style={{
           backgroundColor: `${category?.color ?? '#94a3b8'}1a`,
           color: category?.color ?? '#64748b',

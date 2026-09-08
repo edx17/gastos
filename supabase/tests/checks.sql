@@ -95,6 +95,54 @@ begin
   raise notice 'OK · RLS: aislamiento entre cuentas verificado';
 end $$;
 
+-- Modo hogar: quién puso cuánto y quién le debe a quién.
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  hid uuid;
+  ana uuid;
+  beto uuid;
+  cat uuid;
+  row record;
+begin
+  insert into public.households (name, owner_id)
+  values ('Casa', '11111111-1111-4111-8111-111111111111')
+  returning id into hid;
+
+  insert into public.household_members (household_id, user_id, role, display_name, share)
+  values (hid, '11111111-1111-4111-8111-111111111111', 'owner', 'Ana', 0.5)
+  returning id into ana;
+
+  -- Beto participa del hogar aunque no tenga cuenta en la app.
+  insert into public.household_members (household_id, user_id, role, display_name, share, invite_email)
+  values (hid, null, 'member', 'Beto', 0.5, 'beto@crocante.test')
+  returning id into beto;
+
+  select id into cat from public.categories
+  where user_id = '11111111-1111-4111-8111-111111111111' and slug = 'alimentacion';
+
+  insert into public.transactions (user_id, household_id, type, amount, base_amount, description,
+    category_id, transaction_date, paid_by, source)
+  values
+    ('11111111-1111-4111-8111-111111111111', hid, 'expense', 600000, 600000, 'Supermercado', cat, current_date, ana, 'manual'),
+    ('11111111-1111-4111-8111-111111111111', hid, 'expense', 450000, 450000, 'Expensas', cat, current_date, beto, 'manual');
+
+  for row in
+    select * from public.household_balance(hid, current_date - 30, current_date)
+  loop
+    if row.display_name = 'Ana' then
+      assert row.paid = 600000, format('Ana puso %s', row.paid);
+      assert row.balance = 75000, format('Ana debería estar +75000, está en %s', row.balance);
+    else
+      assert row.paid = 450000, format('Beto puso %s', row.paid);
+      assert row.balance = -75000, format('Beto debería estar -75000, está en %s', row.balance);
+    end if;
+  end loop;
+
+  raise notice 'OK · hogar: gastos compartidos y balance 50/50 calculados';
+end $$;
+
 -- Un usuario sí ve lo propio.
 set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
 do $$

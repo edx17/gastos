@@ -26,7 +26,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Alimentación',
     kind: 'expense',
     icon: 'ShoppingCart',
-    color: '#0f766e',
+    color: '#2f9e8f',
     subcategories: [
       {
         slug: 'supermercado',
@@ -56,7 +56,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Transporte',
     kind: 'expense',
     icon: 'Car',
-    color: '#2563eb',
+    color: '#5b8def',
     subcategories: [
       { slug: 'combustible', name: 'Combustible', keywords: ['nafta', 'combustible', 'gasoil', 'gnc', 'ypf', 'shell', 'axion', 'puma energy', 'puma', 'estacion de servicio', 'surtidor', 'cargue nafta', 'carga de nafta'] },
       { slug: 'transporte-publico', name: 'Transporte público', keywords: ['sube', 'colectivo', 'bondi', 'subte', 'tren', 'micro', 'omnibus', 'boleto'] },
@@ -72,7 +72,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Hogar',
     kind: 'expense',
     icon: 'Home',
-    color: '#7c3aed',
+    color: '#8b6fe0',
     subcategories: [
       { slug: 'alquiler', name: 'Alquiler', keywords: ['alquiler', 'renta', 'inmobiliaria', 'garantia del alquiler'] },
       { slug: 'expensas', name: 'Expensas', keywords: ['expensas', 'consorcio', 'administracion del edificio'] },
@@ -90,7 +90,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Salud',
     kind: 'expense',
     icon: 'HeartPulse',
-    color: '#e11d48',
+    color: '#e8697d',
     subcategories: [
       { slug: 'obra-social', name: 'Obra social', keywords: ['obra social', 'prepaga', 'osde', 'swiss medical', 'galeno', 'medife', 'omint', 'sancor salud'] },
       { slug: 'farmacia', name: 'Farmacia', keywords: ['farmacia', 'farmacity', 'remedios', 'medicamento', 'ibuprofeno', 'pharmacy', 'dr ahorro'] },
@@ -104,7 +104,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Educación',
     kind: 'expense',
     icon: 'GraduationCap',
-    color: '#0891b2',
+    color: '#43a7c4',
     subcategories: [
       { slug: 'colegio', name: 'Colegio', keywords: ['colegio', 'escuela', 'cuota del colegio', 'jardin', 'guarderia'] },
       { slug: 'universidad', name: 'Universidad', keywords: ['universidad', 'facultad', 'utn', 'uba', 'siglo 21', 'maestria', 'posgrado'] },
@@ -118,7 +118,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Entretenimiento',
     kind: 'expense',
     icon: 'Clapperboard',
-    color: '#d946ef',
+    color: '#d183d8',
     subcategories: [
       { slug: 'streaming', name: 'Streaming', keywords: ['netflix', 'spotify', 'disney', 'hbo', 'max', 'prime video', 'star plus', 'youtube premium', 'apple tv', 'crunchyroll', 'suscripcion', 'paramount'] },
       { slug: 'cine', name: 'Cine', keywords: ['cine', 'cinemark', 'hoyts', 'showcase', 'entradas de cine'] },
@@ -132,7 +132,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Ropa',
     kind: 'expense',
     icon: 'Shirt',
-    color: '#f97316',
+    color: '#f0955a',
     subcategories: [
       { slug: 'indumentaria', name: 'Indumentaria', keywords: ['ropa', 'remera', 'pantalon', 'campera', 'jean', 'zara', 'h&m', 'kevingston', 'indumentaria', 'buzo', 'vestido'] },
       { slug: 'calzado', name: 'Calzado', keywords: ['zapatillas', 'zapatos', 'botas', 'sandalias', 'calzado', 'grimoldi', 'stock center', 'dexter'] },
@@ -144,7 +144,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Deporte',
     kind: 'expense',
     icon: 'Dumbbell',
-    color: '#16a34a',
+    color: '#57b86f',
     subcategories: [
       { slug: 'gimnasio', name: 'Gimnasio', keywords: ['gym', 'gimnasio', 'sportclub', 'megatlon', 'cuota del gym', 'crossfit', 'pilates', 'yoga'] },
       { slug: 'equipamiento', name: 'Equipamiento', keywords: ['pesas', 'mancuernas', 'equipamiento deportivo', 'bicicleta', 'raqueta', 'pelota'] },
@@ -158,7 +158,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Finanzas',
     kind: 'expense',
     icon: 'Landmark',
-    color: '#64748b',
+    color: '#8695a8',
     subcategories: [
       { slug: 'comisiones', name: 'Comisiones', keywords: ['comision', 'mantenimiento de cuenta', 'costo bancario', 'sellado'] },
       { slug: 'intereses', name: 'Intereses', keywords: ['interes', 'intereses', 'punitorios', 'financiacion'] },
@@ -172,7 +172,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Personal',
     kind: 'expense',
     icon: 'Sparkles',
-    color: '#db2777',
+    color: '#e58bb0',
     subcategories: [
       { slug: 'regalos', name: 'Regalos', keywords: ['regalo', 'cumpleanos', 'aguinaldo para', 'presente', 'navidad'] },
       { slug: 'cuidado-personal', name: 'Cuidado personal', keywords: ['peluqueria', 'barberia', 'shampoo', 'perfume', 'cosmetica', 'manicura', 'depilacion', 'crema', 'desodorante', 'higiene'] },
@@ -185,7 +185,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Inversiones',
     kind: 'investment',
     icon: 'TrendingUp',
-    color: '#0d9488',
+    color: '#3fb0a3',
     subcategories: [
       { slug: 'dolar', name: 'Dólar', keywords: ['dolar', 'dolares', 'compra de dolares', 'mep', 'ccl', 'blue'] },
       { slug: 'acciones', name: 'Acciones', keywords: ['acciones', 'cedear', 'cedears', 'bolsa'] },
@@ -199,7 +199,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
     name: 'Ingresos',
     kind: 'income',
     icon: 'Wallet',
-    color: '#15803d',
+    color: '#46a86c',
     subcategories: [
       { slug: 'sueldo', name: 'Sueldo', keywords: ['sueldo', 'salario', 'cobre el sueldo', 'aguinaldo', 'quincena', 'haberes'] },
       { slug: 'freelance', name: 'Freelance', keywords: ['freelance', 'factura', 'honorarios', 'changa', 'proyecto', 'cliente'] },

@@ -43,7 +43,7 @@ export function Dialog({ open, onClose, title, description, children, footer, si
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         className={cn(
-          'relative z-10 max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card p-5 shadow-xl animate-slide-up sm:rounded-2xl',
+          'clay relative z-10 max-h-[92vh] w-full overflow-y-auto rounded-t-[1.75rem] p-6 animate-slide-up sm:rounded-[1.75rem]',
           size === 'sm' && 'sm:max-w-md',
           size === 'md' && 'sm:max-w-xl',
           size === 'lg' && 'sm:max-w-3xl',

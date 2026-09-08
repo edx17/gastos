@@ -2,58 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Identidad visual: claymorphism.
+ *
+ * Todo se apoya en superficies blandas con doble sombra —una cálida hacia afuera y
+ * una luz hacia adentro— sobre un fondo levemente teñido. Los bordes casi no se usan:
+ * el volumen lo dan las sombras. Los controles se hunden al presionarlos.
+ */
 @layer base {
   :root {
-    --background: 150 20% 98%;
-    --foreground: 190 25% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 190 25% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 190 25% 12%;
-    --primary: 172 66% 28%;
-    --primary-foreground: 150 40% 98%;
-    --secondary: 165 25% 94%;
-    --secondary-foreground: 175 40% 20%;
-    --muted: 160 16% 95%;
-    --muted-foreground: 190 10% 42%;
-    --accent: 168 45% 92%;
-    --accent-foreground: 175 45% 22%;
-    --destructive: 0 72% 48%;
+    --background: 156 34% 93%;
+    --foreground: 190 30% 14%;
+    --card: 150 40% 99%;
+    --card-foreground: 190 30% 14%;
+    --popover: 150 40% 99%;
+    --popover-foreground: 190 30% 14%;
+    --primary: 172 58% 33%;
+    --primary-foreground: 150 45% 98%;
+    --secondary: 158 34% 90%;
+    --secondary-foreground: 176 40% 22%;
+    --muted: 156 30% 90%;
+    --muted-foreground: 186 12% 42%;
+    --accent: 166 42% 89%;
+    --accent-foreground: 176 45% 22%;
+    --destructive: 4 68% 52%;
     --destructive-foreground: 0 0% 100%;
-    --warning: 38 92% 46%;
-    --warning-foreground: 30 60% 12%;
-    --success: 152 60% 34%;
+    --warning: 34 88% 50%;
+    --warning-foreground: 28 65% 14%;
+    --success: 152 52% 36%;
     --success-foreground: 0 0% 100%;
-    --border: 165 16% 88%;
-    --input: 165 16% 88%;
-    --ring: 172 66% 32%;
-    --radius: 0.85rem;
+    --border: 160 22% 86%;
+    --input: 160 22% 86%;
+    --ring: 172 58% 38%;
+    --radius: 1.35rem;
+
+    /* Piezas de la sombra de arcilla. */
+    --clay-shadow: 168 30% 55%;
+    --clay-light: 0 0% 100%;
+    --clay-depth: 0.42;
   }
 
   .dark {
-    --background: 195 30% 7%;
-    --foreground: 160 20% 96%;
-    --card: 195 27% 10%;
-    --card-foreground: 160 20% 96%;
-    --popover: 195 27% 10%;
-    --popover-foreground: 160 20% 96%;
-    --primary: 166 60% 45%;
-    --primary-foreground: 195 40% 8%;
-    --secondary: 195 20% 16%;
-    --secondary-foreground: 160 20% 94%;
-    --muted: 195 20% 15%;
-    --muted-foreground: 175 12% 65%;
-    --accent: 190 25% 18%;
-    --accent-foreground: 160 30% 92%;
-    --destructive: 0 62% 52%;
+    --background: 192 28% 11%;
+    --foreground: 158 22% 95%;
+    --card: 192 24% 15%;
+    --card-foreground: 158 22% 95%;
+    --popover: 192 24% 15%;
+    --popover-foreground: 158 22% 95%;
+    --primary: 166 55% 47%;
+    --primary-foreground: 194 40% 9%;
+    --secondary: 192 20% 21%;
+    --secondary-foreground: 158 22% 94%;
+    --muted: 192 20% 19%;
+    --muted-foreground: 172 12% 68%;
+    --accent: 188 24% 23%;
+    --accent-foreground: 158 30% 92%;
+    --destructive: 4 62% 55%;
     --destructive-foreground: 0 0% 100%;
-    --warning: 38 88% 55%;
-    --warning-foreground: 30 60% 10%;
-    --success: 152 52% 45%;
-    --success-foreground: 195 40% 8%;
-    --border: 195 18% 20%;
-    --input: 195 18% 22%;
-    --ring: 166 60% 45%;
+    --warning: 36 85% 58%;
+    --warning-foreground: 28 60% 12%;
+    --success: 152 48% 48%;
+    --success-foreground: 194 40% 9%;
+    --border: 192 18% 24%;
+    --input: 192 18% 26%;
+    --ring: 166 55% 47%;
+
+    --clay-shadow: 195 45% 4%;
+    --clay-light: 190 22% 34%;
+    --clay-depth: 0.7;
   }
 
   * { @apply border-border; }
@@ -61,15 +77,67 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'cv02','cv03','cv04','tnum';
+    /* Un degradado apenas perceptible evita que el fondo se vea plano bajo las piezas. */
+    background-image: radial-gradient(120% 90% at 12% 0%, hsl(var(--card) / 0.75), transparent 60%);
+    background-attachment: fixed;
   }
   ::selection { @apply bg-primary/20; }
 }
 
 @layer components {
-  .card-surface {
-    @apply rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(16,24,40,.04),0_8px_24px_-16px_rgba(16,24,40,.18)];
+  /* Superficie elevada: la pieza de arcilla. */
+  .clay {
+    @apply rounded-lg bg-card;
+    box-shadow:
+      10px 10px 22px hsl(var(--clay-shadow) / var(--clay-depth)),
+      -8px -8px 18px hsl(var(--clay-light) / 0.85),
+      inset 3px 3px 6px hsl(var(--clay-light) / 0.7),
+      inset -4px -5px 12px hsl(var(--clay-shadow) / 0.2);
   }
+
+  .clay-sm {
+    @apply rounded-md bg-card;
+    box-shadow:
+      6px 6px 13px hsl(var(--clay-shadow) / calc(var(--clay-depth) * 0.85)),
+      -4px -4px 10px hsl(var(--clay-light) / 0.8),
+      inset 2px 2px 4px hsl(var(--clay-light) / 0.6),
+      inset -2px -3px 7px hsl(var(--clay-shadow) / 0.18);
+  }
+
+  /* Superficie hundida: campos de texto, huecos, barras de progreso. */
+  .clay-inset {
+    @apply rounded-md bg-muted;
+    box-shadow:
+      inset 5px 5px 11px hsl(var(--clay-shadow) / calc(var(--clay-depth) * 0.95)),
+      inset -4px -4px 10px hsl(var(--clay-light) / 0.75);
+  }
+
+  /* Panel de fondo: sostiene barras laterales y encabezados sin cortarlos con una línea. */
+  .clay-panel {
+    @apply bg-background;
+    box-shadow: 12px 0 28px -18px hsl(var(--clay-shadow) / calc(var(--clay-depth) * 1.1));
+  }
+
+  /* Pieza de color: hereda el tono del fondo del elemento. */
+  .clay-tinted {
+    box-shadow:
+      6px 6px 14px hsl(var(--clay-shadow) / calc(var(--clay-depth) * 0.95)),
+      -3px -3px 10px hsl(var(--clay-light) / 0.5),
+      inset 2px 2px 6px hsl(0 0% 100% / 0.38),
+      inset -3px -4px 9px hsl(var(--clay-shadow) / 0.45);
+  }
+
+  /* Al presionar, la pieza se hunde: el gesto se siente. */
+  .clay-press:active:not(:disabled) {
+    box-shadow:
+      inset 4px 4px 9px hsl(var(--clay-shadow) / calc(var(--clay-depth) * 0.95)),
+      inset -2px -2px 7px hsl(var(--clay-light) / 0.55);
+    transform: translateY(1px);
+  }
+
+  .card-surface { @apply clay; }
   .num { @apply font-numeric tabular-nums tracking-tight; }
+
   .scrollbar-thin::-webkit-scrollbar { height: 8px; width: 8px; }
   .scrollbar-thin::-webkit-scrollbar-thumb { @apply rounded-full bg-border; }
 }

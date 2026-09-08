@@ -142,7 +142,7 @@ export default function BudgetsPage() {
                       : `Te pasaste ${formatMoney(Math.abs(item.remaining), { currency })}`}
                   </span>
                   {item.projected_end_of_period ? (
-                    <span>Proyección: {formatMoney(item.projected_end_of_period, { currency })}</span>
+                    <span>A este ritmo: {formatMoney(item.projected_end_of_period, { currency })}</span>
                   ) : null}
                 </div>
 

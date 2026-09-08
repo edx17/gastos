@@ -80,7 +80,7 @@ El `project-ref` es la parte del medio de la URL: `https://<ref>.supabase.co`.
 
 **Opción B — a mano, sin instalar nada:** en el panel de Supabase, **SQL Editor →
 New query**, y pegá y ejecutá el contenido de cada archivo de `supabase/migrations/`
-**en orden numérico** (del `…000001_` al `…000006_`). Son seis.
+**en orden numérico**, empezando por `…000001_`. Son siete archivos.
 
 ### 3.3 Conectar la app
 

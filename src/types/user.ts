@@ -46,9 +46,33 @@ export interface Household {
 export interface HouseholdMember {
   id: UUID;
   household_id: UUID;
-  user_id: UUID;
+  /** Null cuando la persona participa del hogar pero no usa la app. */
+  user_id: UUID | null;
   role: 'owner' | 'member' | 'viewer';
   display_name: string;
+  invite_email?: string | null;
+  color: string;
+  /** Parte que le corresponde del gasto compartido (se normaliza sobre el total). */
   share: number;
+  is_active: boolean;
   created_at: ISODateTime;
+}
+
+/** Cuánto puso cada persona y cuánto le correspondía en un período. */
+export interface HouseholdBalance {
+  member_id: UUID;
+  display_name: string;
+  color: string;
+  share: number;
+  paid: number;
+  owed: number;
+  /** Positivo: puso de más y el resto le debe. */
+  balance: number;
+}
+
+/** Quién le tiene que transferir cuánto a quién para quedar a mano. */
+export interface Settlement {
+  from: string;
+  to: string;
+  amount: number;
 }

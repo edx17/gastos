@@ -29,7 +29,7 @@ export function StatCard({
         {Icon ? (
           <span
             className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-lg',
+              'clay-sm flex h-10 w-10 items-center justify-center rounded-full',
               accent === 'income' && 'bg-success/12 text-success',
               accent === 'expense' && 'bg-destructive/10 text-destructive',
               accent === 'savings' && 'bg-primary/10 text-primary',
@@ -41,7 +41,7 @@ export function StatCard({
         ) : null}
       </div>
       <p className="num mt-3 text-2xl font-semibold sm:text-[28px]">{formatMoney(value, { currency })}</p>
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
         {comparison ? <ComparisonBadge metric={comparison} /> : null}
         {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
       </div>

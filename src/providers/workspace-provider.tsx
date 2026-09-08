@@ -4,7 +4,7 @@ import type { DataClient } from '@/services/data';
 import type { CategorizationRule } from '@/types/ai';
 import type { CategoryTree } from '@/types/category';
 import type { PaymentMethod, Transaction } from '@/types/transaction';
-import type { Profile } from '@/types/user';
+import type { Household, HouseholdMember, Profile } from '@/types/user';
 import { useAuth } from './auth-provider';
 
 interface WorkspaceContextValue {
@@ -17,6 +17,10 @@ interface WorkspaceContextValue {
   /** Recent rows kept in memory: the categorization engine uses them as precedent. */
   history: Transaction[];
   rates: Record<string, number>;
+  /** Hogar activo (el primero al que pertenece la persona), si tiene uno. */
+  household: Household | null;
+  householdMembers: HouseholdMember[];
+  refreshHousehold: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   refreshCategories: () => Promise<void>;
   refreshRules: () => Promise<void>;
@@ -39,6 +43,8 @@ export function WorkspaceProvider({ children, fallback }: { children: React.Reac
   const [rules, setRules] = React.useState<CategorizationRule[]>([]);
   const [history, setHistory] = React.useState<Transaction[]>([]);
   const [rates, setRates] = React.useState<Record<string, number>>({ ARS: 1 });
+  const [household, setHousehold] = React.useState<Household | null>(null);
+  const [householdMembers, setHouseholdMembers] = React.useState<HouseholdMember[]>([]);
   const [revision, setRevision] = React.useState(0);
   const [ready, setReady] = React.useState(false);
 
@@ -48,6 +54,14 @@ export function WorkspaceProvider({ children, fallback }: { children: React.Reac
     if (!userId) return;
     const page = await client.listTransactions(userId, { page: 1, pageSize: 300, sort: 'date_desc' });
     setHistory(page.rows);
+  }, [client, userId]);
+
+  const loadHousehold = React.useCallback(async () => {
+    if (!userId) return;
+    const households = await client.listHouseholds(userId);
+    const active = households[0] ?? null;
+    setHousehold(active);
+    setHouseholdMembers(active ? await client.listHouseholdMembers(active.id) : []);
   }, [client, userId]);
 
   React.useEffect(() => {
@@ -73,6 +87,7 @@ export function WorkspaceProvider({ children, fallback }: { children: React.Reac
       setRules(loadedRules);
       setRates(loadedRates);
       await loadHistory();
+      await loadHousehold().catch(() => undefined);
       if (active) setReady(true);
     })().catch(() => {
       if (active) setReady(true);
@@ -81,7 +96,7 @@ export function WorkspaceProvider({ children, fallback }: { children: React.Reac
     return () => {
       active = false;
     };
-  }, [client, userId, loadHistory]);
+  }, [client, userId, loadHistory, loadHousehold]);
 
   const value = React.useMemo<WorkspaceContextValue | null>(() => {
     if (!profile || !userId) return null;
@@ -94,16 +109,33 @@ export function WorkspaceProvider({ children, fallback }: { children: React.Reac
       rules,
       history,
       rates,
+      household,
+      householdMembers,
       revision,
       bumpRevision: () => setRevision((n) => n + 1),
       refreshProfile: async () => setProfile(await client.getProfile(userId)),
       refreshCategories: async () => setCategories(await client.listCategories(userId)),
       refreshRules: async () => setRules(await client.listRules(userId)),
       refreshHistory: loadHistory,
+      refreshHousehold: loadHousehold,
       refreshPaymentMethods: async () => setPaymentMethods(await client.listPaymentMethods(userId)),
       refreshRates: async () => setRates(await client.getRateTable(userId)),
     };
-  }, [client, userId, profile, categories, paymentMethods, rules, history, rates, revision, loadHistory]);
+  }, [
+    client,
+    userId,
+    profile,
+    categories,
+    paymentMethods,
+    rules,
+    history,
+    rates,
+    household,
+    householdMembers,
+    revision,
+    loadHistory,
+    loadHousehold,
+  ]);
 
   if (!ready || !value) return <>{fallback}</>;
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

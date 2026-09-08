@@ -22,7 +22,7 @@ import type {
   TransactionInput,
   TransactionItem,
 } from '@/types/transaction';
-import type { AuthUser, Household, HouseholdMember, Profile } from '@/types/user';
+import type { AuthUser, Household, HouseholdBalance, HouseholdMember, Profile, Settlement } from '@/types/user';
 import {
   antExpenses,
   categoryBreakdown,
@@ -254,11 +254,80 @@ export class LocalDataClient implements DataClient {
       user_id: userId,
       role: 'owner',
       display_name: profile.display_name,
+      color: '#2f9e8f',
       share: 0.5,
+      is_active: true,
       created_at: household.created_at,
     });
     this.writeDb(userId, db);
     return household;
+  }
+
+  async updateHousehold(id: UUID, patch: Partial<Household>): Promise<Household> {
+    const userId = this.requireSession();
+    const db = this.db(userId);
+    const index = db.households.findIndex((h) => h.id === id);
+    if (index === -1) throw err('household/not-found', 'No encontré ese hogar.');
+    db.households[index] = { ...db.households[index], ...patch };
+    this.writeDb(userId, db);
+    return db.households[index];
+  }
+
+  async addHouseholdMember(
+    householdId: UUID,
+    input: { display_name: string; invite_email?: string | null; share?: number; color?: string },
+  ): Promise<HouseholdMember> {
+    const userId = this.requireSession();
+    const db = this.db(userId);
+    const member: HouseholdMember = {
+      id: uid(),
+      household_id: householdId,
+      // En modo demo nadie más inicia sesión: la persona existe como integrante del hogar.
+      user_id: null,
+      role: 'member',
+      display_name: input.display_name,
+      invite_email: input.invite_email ?? null,
+      color: input.color ?? MEMBER_COLORS[db.household_members.length % MEMBER_COLORS.length],
+      share: input.share ?? 0.5,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+    db.household_members.push(member);
+    this.writeDb(userId, db);
+    return member;
+  }
+
+  async updateHouseholdMember(id: UUID, patch: Partial<HouseholdMember>): Promise<HouseholdMember> {
+    const userId = this.requireSession();
+    const db = this.db(userId);
+    const index = db.household_members.findIndex((m) => m.id === id);
+    if (index === -1) throw err('household/member-not-found', 'No encontré a esa persona en el hogar.');
+    db.household_members[index] = { ...db.household_members[index], ...patch };
+    this.writeDb(userId, db);
+    return db.household_members[index];
+  }
+
+  async removeHouseholdMember(id: UUID): Promise<void> {
+    const userId = this.requireSession();
+    const db = this.db(userId);
+    db.household_members = db.household_members.filter((m) => m.id !== id);
+    // Los gastos quedan en el hogar, sólo pierden a quién se los atribuía.
+    db.transactions = db.transactions.map((t) => (t.paid_by === id ? { ...t, paid_by: null } : t));
+    this.writeDb(userId, db);
+  }
+
+  async getHouseholdBalance(householdId: UUID, range: DateRangeInput): Promise<HouseholdBalance[]> {
+    const userId = this.requireSession();
+    const db = this.db(userId);
+    const members = db.household_members.filter((m) => m.household_id === householdId && m.is_active);
+    const rows = db.transactions.filter(
+      (t) =>
+        t.household_id === householdId &&
+        t.type === 'expense' &&
+        t.transaction_date >= range.from &&
+        t.transaction_date <= range.to,
+    );
+    return computeHouseholdBalance(members, rows);
   }
 
   // ---------------------------------------------------------- categories
@@ -658,7 +727,9 @@ export class LocalDataClient implements DataClient {
           period_start: periodStart,
           period_end: periodEnd,
           category_name: categories.find((c) => c.id === budget.category_id)?.name,
-          projected_end_of_period: round((spent / elapsed) * totalDays, 2),
+          // Sólo cuando ya pasó un cuarto del período: antes proyecta cualquier cosa.
+          projected_end_of_period:
+            elapsed / totalDays >= 0.25 ? round((spent / elapsed) * totalDays, 2) : undefined,
         } satisfies BudgetProgress;
       })
       .sort((a, b) => b.ratio - a.ratio);
@@ -1123,6 +1194,61 @@ export function projectGoal(goal: Goal): GoalProjection {
 
 function daysElapsed(from: string, to: string): number {
   return Math.max(1, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86_400_000) + 1);
+}
+
+export const MEMBER_COLORS = ['#2f9e8f', '#8b6fe0', '#f0955a', '#5b8def', '#e58bb0', '#57b86f'];
+
+/**
+ * Reparte el gasto compartido según la parte de cada persona y compara contra lo que
+ * puso. Un balance positivo significa que puso de más.
+ */
+export function computeHouseholdBalance(
+  members: HouseholdMember[],
+  rows: Pick<Transaction, 'paid_by' | 'base_amount'>[],
+): HouseholdBalance[] {
+  const total = round(rows.reduce((acc, row) => acc + row.base_amount, 0), 2);
+  const totalShare = members.reduce((acc, member) => acc + member.share, 0) || 1;
+
+  return members
+    .map((member) => {
+      const share = member.share / totalShare;
+      const paid = round(
+        rows.filter((row) => row.paid_by === member.id).reduce((acc, row) => acc + row.base_amount, 0),
+        2,
+      );
+      const owed = round(total * share, 2);
+      return {
+        member_id: member.id,
+        display_name: member.display_name,
+        color: member.color,
+        share: round(share, 4),
+        paid,
+        owed,
+        balance: round(paid - owed, 2),
+      } satisfies HouseholdBalance;
+    })
+    .sort((a, b) => b.paid - a.paid);
+}
+
+/**
+ * Convierte los balances en las transferencias mínimas para quedar a mano:
+ * quien está en rojo le paga a quien está en verde, de mayor a menor.
+ */
+export function settleBalances(balances: HouseholdBalance[]): Settlement[] {
+  const debtors = balances.filter((b) => b.balance < -0.5).map((b) => ({ ...b, remaining: -b.balance }));
+  const creditors = balances.filter((b) => b.balance > 0.5).map((b) => ({ ...b, remaining: b.balance }));
+  const out: Settlement[] = [];
+
+  for (const debtor of debtors) {
+    for (const creditor of creditors) {
+      if (debtor.remaining <= 0.5 || creditor.remaining <= 0.5) continue;
+      const amount = round(Math.min(debtor.remaining, creditor.remaining), 2);
+      out.push({ from: debtor.display_name, to: creditor.display_name, amount });
+      debtor.remaining = round(debtor.remaining - amount, 2);
+      creditor.remaining = round(creditor.remaining - amount, 2);
+    }
+  }
+  return out;
 }
 
 function defaultPaymentMethods(userId: string): PaymentMethod[] {

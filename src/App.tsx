@@ -19,6 +19,7 @@ const GoalsPage = lazy(() => import('@/pages/app/goals'));
 const ReceiptsPage = lazy(() => import('@/pages/app/receipts'));
 const CalendarPage = lazy(() => import('@/pages/app/calendar'));
 const AskPage = lazy(() => import('@/pages/app/ask'));
+const HouseholdPage = lazy(() => import('@/pages/app/household'));
 const SettingsPage = lazy(() => import('@/pages/app/settings'));
 const NotFoundPage = lazy(() => import('@/pages/not-found'));
 
@@ -47,6 +48,7 @@ export default function App() {
                     <Route path="receipts" element={<ReceiptsPage />} />
                     <Route path="calendar" element={<CalendarPage />} />
                     <Route path="ask" element={<AskPage />} />
+                    <Route path="household" element={<HouseholdPage />} />
                     <Route path="settings" element={<SettingsPage />} />
                     <Route path="profile" element={<Navigate to="/app/settings" replace />} />
                   </Route>
