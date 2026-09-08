@@ -40,6 +40,8 @@ cp .env.example .env      # opcional: sin Supabase arranca en modo demo
 npm run dev               # http://localhost:5173
 ```
 
+¿Primera vez, en Windows, desde cero? Seguí **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
 En la pantalla de login hay un botón **«Probar con datos de ejemplo»** que crea una
 cuenta local con ~200 movimientos, presupuestos y metas para ver todo funcionando.
 
@@ -248,15 +250,14 @@ El SQL se verifica aparte con `scripts/verify-sql.sh` (incluye pruebas de RLS).
 
 ## Deploy
 
-El front es estático (Vite):
+El front es estático (Vite): `npm run build` genera `dist/`. El repo trae
+`vercel.json` con el *rewrite* de rutas a `index.html` (la app usa History API) y las
+cabeceras de seguridad, así que en Vercel funciona sin configurar nada más. En Netlify
+o Cloudflare Pages hay que configurar ese mismo rewrite a mano.
 
-```bash
-npm run build     # genera dist/
-```
-
-Publicalo en Vercel, Netlify, Cloudflare Pages o cualquier hosting estático,
-configurando las variables `VITE_*` y un *rewrite* de todas las rutas a `index.html`
-(la app usa History API). El backend es tu proyecto de Supabase.
+**[docs/DEPLOY.md](docs/DEPLOY.md)** tiene la guía completa paso a paso: instalar las
+herramientas en Windows, crear el proyecto de Supabase, aplicar las migraciones,
+configurar IA y OCR, y publicar en Vercel.
 
 ---
 
