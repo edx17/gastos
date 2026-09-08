@@ -10,14 +10,14 @@
  */
 export const legal = {
   /** Razón social o nombre completo de la persona que presta el servicio. */
-  companyName: '(completar)',
+  companyName: 'Eduardo Javier Theunynck',
   /** CUIT o CUIL. */
-  taxId: '(completar)',
+  taxId: '20-34154188-4',
   /** Domicilio comercial. */
-  address: '(completar)',
+  address: 'Av. Rivadavia 5871, CABA',
   city: 'Argentina',
   /** Correo de contacto para consultas, bajas y datos personales. */
-  contactEmail: 'hola@crocante.app',
+  contactEmail: 'virtualfutsal@gmail.com',
   /** Dominio donde vive el servicio. */
   site: 'crocante.app',
   /** Fecha de la última actualización de los textos legales. */
