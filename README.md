@@ -29,6 +29,7 @@ en toda la aplicación.
 | Importación CSV con mapeo de columnas y detección de duplicados | ✅ |
 | Calendario financiero y buscador global | ✅ |
 | Interfaz claymorphism, con modo claro y oscuro | ✅ |
+| Auth completa: registro, login, recuperación de contraseña y Google | ✅ (Google requiere credenciales, ver deploy) |
 | Modo pareja / hogar: gastos compartidos, quién pagó y balance | ✅ |
 
 ---

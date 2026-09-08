@@ -106,13 +106,48 @@ Para cargar datos de ejemplo en tu cuenta real, en **SQL Editor**:
 select public.seed_demo_data(auth.uid());
 ```
 
-### 3.4 Entrar con Google (opcional)
+### 3.4 Entrar con Google
 
-En **Authentication → Providers → Google**, activalo y pegá el Client ID y el Secret
-que saques de [Google Cloud Console](https://console.cloud.google.com). Como URI de
-redirección autorizada usá la que te muestra Supabase.
+El botón «Continuar con Google» ya está en el código y aparece solo en cuanto Supabase
+está configurado, pero **no funciona hasta que crees las credenciales**: Google exige
+que la aplicación esté registrada. Son cinco minutos.
 
-### 3.5 IA y OCR de verdad (opcional)
+**En [Google Cloud Console](https://console.cloud.google.com):**
+
+1. Creá un proyecto (o usá uno existente).
+2. **APIs y servicios → Pantalla de consentimiento de OAuth**: tipo **Externo**, poné
+   nombre de la app, tu mail de soporte y tu mail de contacto. Guardá.
+   > Mientras esté en modo «Prueba» sólo entran los usuarios que agregues como
+   > *test users*. Para que entre cualquiera hay que publicarla.
+3. **Credenciales → Crear credenciales → ID de cliente de OAuth → Aplicación web**:
+   - **Orígenes de JavaScript autorizados**: `http://localhost:5173` y, cuando la
+     tengas, `https://tu-app.vercel.app`
+   - **URI de redireccionamiento autorizado**: el callback de tu proyecto Supabase,
+     que tiene esta forma:
+     `https://<tu-ref>.supabase.co/auth/v1/callback`
+4. Copiá el **ID de cliente** y el **Secreto de cliente**.
+
+**En Supabase → Authentication → Providers → Google:** activalo, pegá esos dos valores
+y guardá.
+
+**En Supabase → Authentication → URL Configuration** (esto es lo que más se olvida):
+
+- **Site URL**: `https://tu-app.vercel.app` (o `http://localhost:5173` mientras probás)
+- **Redirect URLs**: agregá `http://localhost:5173/**` y `https://tu-app.vercel.app/**`
+
+Sin ese último paso, Google autentica bien pero Supabase te devuelve a `localhost` —o
+directamente rechaza la vuelta— y parece que el login «no anda».
+
+> El `enabled = false` de `supabase/config.toml` sólo afecta al entorno local que
+> levanta `supabase start`. El proyecto alojado se configura desde el panel.
+
+### 3.5 Recuperación de contraseña
+
+Funciona sin configurar nada: Supabase manda el mail y la app tiene la pantalla
+`/reset-password` donde la persona elige la nueva. Lo único necesario es que
+`https://tu-app.vercel.app/**` esté en las **Redirect URLs** de arriba.
+
+### 3.6 IA y OCR de verdad (opcional)
 
 Sin esto, la app usa el parser propio (que anda bien) y un OCR simulado. Para tickets
 reales necesitás un proveedor:

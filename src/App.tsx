@@ -10,6 +10,7 @@ const LandingPage = lazy(() => import('@/pages/landing'));
 const LoginPage = lazy(() => import('@/pages/auth/login'));
 const RegisterPage = lazy(() => import('@/pages/auth/register'));
 const ForgotPasswordPage = lazy(() => import('@/pages/auth/forgot-password'));
+const ResetPasswordPage = lazy(() => import('@/pages/auth/reset-password'));
 const DashboardPage = lazy(() => import('@/pages/app/dashboard'));
 const TransactionsPage = lazy(() => import('@/pages/app/transactions'));
 const ReportsPage = lazy(() => import('@/pages/app/reports'));
@@ -36,6 +37,8 @@ export default function App() {
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                  {/* Destino del enlace que Supabase manda por mail. */}
+                  <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                   <Route path="/app" element={<ProtectedRoute />}>
                     <Route index element={<Navigate to="/app/dashboard" replace />} />
