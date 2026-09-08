@@ -197,10 +197,14 @@ sólo conectar el cobro. En Argentina lo que sirve para cobrar en pesos es
 3. Cargá los secretos y desplegá:
 
 ```powershell
-supabase secrets set MERCADOPAGO_ACCESS_TOKEN=APP_USR-... MERCADOPAGO_WEBHOOK_SECRET=... ALLOWED_ORIGIN=https://tu-app.vercel.app
+supabase secrets set MERCADOPAGO_ACCESS_TOKEN=APP_USR-... MERCADOPAGO_WEBHOOK_SECRET=... ALLOWED_ORIGIN=https://tu-app.vercel.app,http://localhost:5173
 supabase functions deploy create-subscription
 supabase functions deploy subscription-webhook
 ```
+
+`ALLOWED_ORIGIN` acepta varios orígenes separados por coma. Incluí también
+`http://localhost:5173`, o las funciones van a rechazar los pedidos mientras
+desarrollás en tu máquina.
 
 El webhook **no** lleva `verify_jwt` (Mercado Pago no manda un token de Supabase):
 la autenticidad se comprueba con la firma del propio proveedor, y sin esa firma la

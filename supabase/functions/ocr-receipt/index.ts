@@ -4,14 +4,13 @@
  * Recibe {provider, image} (base64 sin encabezado) y devuelve {text, confidence}.
  * El parsing del ticket ocurre en el cliente: acá sólo se transcribe.
  */
-import { checkAiQuota, corsHeaders, jsonResponse, rateLimit, requireUser } from '../_shared/cors.ts';
+import { checkAiQuota, jsonResponse, rateLimit, requireUser, withCors } from '../_shared/cors.ts';
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const VISION_PROMPT = `Transcribí COMPLETO el texto de este ticket o factura, respetando líneas y columnas.
 No resumas, no interpretes, no agregues comentarios. Devolvé solamente el texto.`;
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+Deno.serve(withCors(async (request) => {
   if (request.method !== 'POST') return jsonResponse({ error: 'Método no permitido.' }, 405);
 
   const caller = await requireUser(request);
@@ -49,7 +48,7 @@ Deno.serve(async (request) => {
     console.error('ocr-receipt', provider, error instanceof Error ? error.message : 'error');
     return jsonResponse({ error: 'El servicio de OCR no respondió. Probá de nuevo en unos segundos.' }, 502);
   }
-});
+}));
 
 async function recognize(provider: string, image: string): Promise<{ text: string; confidence: number }> {
   if (provider === 'google_vision') {

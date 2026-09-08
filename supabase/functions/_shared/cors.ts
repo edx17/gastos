@@ -1,14 +1,58 @@
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+/**
+ * Orígenes habilitados, separados por coma en ALLOWED_ORIGIN.
+ * Ejemplo: `https://crocante.vercel.app,http://localhost:5173`
+ * Sin la variable se permite cualquiera, útil sólo mientras se prueba.
+ */
+function allowedOrigins(): string[] {
+  return (Deno.env.get('ALLOWED_ORIGIN') ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+export { allowedOrigins };
+
+/**
+ * El navegador exige UN solo origen en la respuesta, no una lista: por eso se
+ * devuelve el del pedido cuando está habilitado, en vez de la variable entera.
+ */
+export function corsHeaders(request?: Request): Record<string, string> {
+  const allowed = allowedOrigins();
+  const origin = request?.headers.get('Origin') ?? '';
+
+  const value = !allowed.length ? '*' : allowed.includes(origin) ? origin : allowed[0];
+
+  return {
+    'Access-Control-Allow-Origin': value,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    // Sin esto, una caché intermedia podría servirle a un origen la respuesta de otro.
+    Vary: 'Origin',
+  };
+}
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
   });
+}
+
+/**
+ * Envuelve el manejador: resuelve el preflight y pega las cabeceras CORS en
+ * toda respuesta, así ninguna función se olvida de hacerlo.
+ */
+export function withCors(handler: (request: Request) => Promise<Response>) {
+  return async (request: Request): Promise<Response> => {
+    const headers = corsHeaders(request);
+    if (request.method === 'OPTIONS') return new Response('ok', { headers });
+
+    const response = await handler(request);
+    for (const [key, value] of Object.entries(headers)) {
+      response.headers.set(key, value);
+    }
+    return response;
+  };
 }
 
 /** Simple per-user, per-minute limiter kept in memory of the running instance. */

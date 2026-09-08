@@ -4,7 +4,7 @@
  * Existe para que las API keys vivan en el servidor y nunca lleguen al navegador.
  * Recibe {provider, model, system, user} y devuelve {text}.
  */
-import { checkAiQuota, corsHeaders, jsonResponse, rateLimit, requireUser } from '../_shared/cors.ts';
+import { checkAiQuota, jsonResponse, rateLimit, requireUser, withCors } from '../_shared/cors.ts';
 
 interface CompletionRequest {
   provider: 'openai' | 'anthropic' | 'gemini';
@@ -15,8 +15,7 @@ interface CompletionRequest {
 
 const MAX_INPUT_CHARS = 8000;
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+Deno.serve(withCors(async (request) => {
   if (request.method !== 'POST') return jsonResponse({ error: 'Método no permitido.' }, 405);
 
   const caller = await requireUser(request);
@@ -49,7 +48,7 @@ Deno.serve(async (request) => {
     console.error('ai-complete', provider, error instanceof Error ? error.message : 'error');
     return jsonResponse({ error: 'El proveedor de IA no respondió. Probá de nuevo en unos segundos.' }, 502);
   }
-});
+}));
 
 async function complete(
   provider: CompletionRequest['provider'],

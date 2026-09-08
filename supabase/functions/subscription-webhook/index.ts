@@ -5,7 +5,7 @@
  * proveedor antes de tocar nada: sin esa verificación, cualquiera que descubra la
  * URL podría regalarse el plan más caro con un POST.
  */
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts';
+import { jsonResponse, withCors } from '../_shared/cors.ts';
 
 const STATUS_MAP: Record<string, string> = {
   authorized: 'active',
@@ -14,8 +14,7 @@ const STATUS_MAP: Record<string, string> = {
   cancelled: 'canceled',
 };
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+Deno.serve(withCors(async (request) => {
   if (request.method !== 'POST') return jsonResponse({ error: 'Método no permitido.' }, 405);
 
   const raw = await request.text();
@@ -97,7 +96,7 @@ Deno.serve(async (request) => {
   });
 
   return jsonResponse({ received: true, status });
-});
+}));
 
 /**
  * Firma de Mercado Pago: `x-signature: ts=...,v1=...` sobre el manifiesto

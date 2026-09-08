@@ -5,10 +5,9 @@
  * El acceso al plan sigue hasta el final del período ya pagado: dar de baja no
  * es perder lo que se pagó.
  */
-import { corsHeaders, jsonResponse, rateLimit, requireUser } from '../_shared/cors.ts';
+import { jsonResponse, rateLimit, requireUser, withCors } from '../_shared/cors.ts';
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+Deno.serve(withCors(async (request) => {
   if (request.method !== 'POST') return jsonResponse({ error: 'Método no permitido.' }, 405);
 
   const caller = await requireUser(request);
@@ -66,4 +65,4 @@ Deno.serve(async (request) => {
   });
 
   return jsonResponse({ ok: true, access_until: subscription.current_period_end });
-});
+}));

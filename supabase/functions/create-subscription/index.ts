@@ -6,15 +6,14 @@
  * `subscription-webhook`. Así, quien llame a esta función mil veces no consigue
  * nada más que mil enlaces sin pagar.
  */
-import { corsHeaders, jsonResponse, rateLimit, requireUser } from '../_shared/cors.ts';
+import { allowedOrigins, jsonResponse, rateLimit, requireUser, withCors } from '../_shared/cors.ts';
 
 interface CheckoutRequest {
   plan: string;
   return_url?: string;
 }
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+Deno.serve(withCors(async (request) => {
   if (request.method !== 'POST') return jsonResponse({ error: 'Método no permitido.' }, 405);
 
   const caller = await requireUser(request);
@@ -74,7 +73,7 @@ Deno.serve(async (request) => {
   if (!url) return jsonResponse({ error: 'El proveedor no devolvió un enlace de pago.' }, 502);
 
   return jsonResponse({ url, provider: 'mercadopago' });
-});
+}));
 
 async function fetchPlan(code: string) {
   const response = await fetch(
@@ -93,8 +92,8 @@ async function fetchPlan(code: string) {
 
 /** Sólo se vuelve a nuestro propio sitio: un back_url arbitrario es un redirect abierto. */
 function safeReturnUrl(candidate?: string): string {
-  const allowed = (Deno.env.get('ALLOWED_ORIGIN') ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
-  const fallback = allowed[0] ?? 'https://localhost:5173';
+  const allowed = allowedOrigins();
+  const fallback = allowed[0] ?? 'http://localhost:5173';
   if (!candidate) return `${fallback}/app/settings`;
   try {
     const url = new URL(candidate);
