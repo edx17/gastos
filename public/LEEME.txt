@@ -1,0 +1,18 @@
+Íconos del sitio
+================
+
+Dejá acá los archivos del paquete de favicons. index.html y site.webmanifest
+ya los referencian con estos nombres exactos:
+
+  favicon.ico
+  favicon-16x16.png
+  favicon-32x32.png
+  apple-touch-icon.png          (180x180)
+  android-chrome-192x192.png
+  android-chrome-512x512.png
+
+Todo lo que esté en esta carpeta se copia tal cual a la raíz del sitio: un
+archivo public/favicon.ico queda servido en /favicon.ico.
+
+El site.webmanifest de esta carpeta ya está completo (nombre, colores, atajo
+de inicio); no hace falta reemplazarlo por el que venga en el paquete.

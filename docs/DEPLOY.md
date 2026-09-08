@@ -171,6 +171,29 @@ cambiar esas dos variables — el código no se toca.
 
 ---
 
+## 3.6.b Íconos del sitio
+
+Los archivos van en `public/` con estos nombres exactos, que son los que ya
+referencian `index.html` y `public/site.webmanifest`:
+
+```
+favicon.ico
+favicon-16x16.png
+favicon-32x32.png
+apple-touch-icon.png          (180x180)
+android-chrome-192x192.png
+android-chrome-512x512.png
+```
+
+Todo lo que esté en `public/` se copia tal cual a la raíz del sitio. El
+`site.webmanifest` del repo ya viene con el nombre, la descripción y los colores
+de la marca: no hace falta pisarlo con el que traiga el paquete de íconos.
+
+Si al abrir el sitio seguís viendo el ícono viejo, es la caché del navegador con
+los favicons, que es especialmente terca: probá en una ventana privada.
+
+---
+
 ## 3.7 Cobrar suscripciones (opcional)
 
 Los planes ya están en la base y sus límites se aplican del lado del servidor. Falta

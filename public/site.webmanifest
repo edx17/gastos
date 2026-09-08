@@ -1,0 +1,30 @@
+{
+  "name": "Crocante · Finanzas personales",
+  "short_name": "Crocante",
+  "description": "Contale qué hiciste con tu plata. Del orden se encarga sola.",
+  "lang": "es-AR",
+  "start_url": "/app/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#238578",
+  "background_color": "#e7f3ee",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
