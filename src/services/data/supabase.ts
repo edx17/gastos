@@ -12,6 +12,7 @@ import type { Category, CategoryTree, Subcategory } from '@/types/category';
 import type { CurrencyCode, ExchangeRate } from '@/types/currency';
 import type { Goal, GoalContribution, GoalProjection } from '@/types/goal';
 import type { AppNotification } from '@/types/notification';
+import type { PlanUsage, Subscription } from '@/types/plan';
 import type { Receipt, ReceiptItem } from '@/types/receipt';
 import type {
   CategoryBreakdown,
@@ -873,6 +874,33 @@ export class SupabaseDataClient implements DataClient {
       .from('recurring_expenses')
       .upsert({ user_id: userId, merchant_key: merchantKey, confirmed, label: merchantKey }, { onConflict: 'user_id,merchant_key' });
     if (error) throw dbError(error);
+  }
+
+  // ------------------------------------------------------------- planes
+
+  async getSubscription(userId: UUID): Promise<Subscription | null> {
+    const { data, error } = await this.db
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw dbError(error);
+    return (data as Subscription) ?? null;
+  }
+
+  async getPlanUsage(userId: UUID): Promise<PlanUsage> {
+    void userId;
+    const { data, error } = await this.db.rpc('plan_usage');
+    if (error) throw dbError(error);
+    const row = (Array.isArray(data) ? data[0] : data) as Record<string, number> | undefined;
+    return {
+      transactions: Number(row?.transactions ?? 0),
+      receipts: Number(row?.receipts ?? 0),
+      ai_queries: Number(row?.ai_queries ?? 0),
+      budgets: Number(row?.budgets ?? 0),
+      goals: Number(row?.goals ?? 0),
+      household_members: Number(row?.household_members ?? 0),
+    };
   }
 
   // ------------------------------------------------------- notifications

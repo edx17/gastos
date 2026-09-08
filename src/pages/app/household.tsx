@@ -18,6 +18,8 @@ import { SkeletonCard } from '@/components/ui/skeleton';
 import { DateRangePicker } from '@/components/finance/date-range-picker';
 import { TransactionRow } from '@/components/finance/transaction-row';
 import { ErrorNote } from '@/components/finance/error-note';
+import { UpgradeCard } from '@/components/billing/upgrade-card';
+import { usePlan } from '@/hooks/use-plan';
 
 /**
  * Modo pareja / hogar: qué se gastó entre todos, quién puso cuánto y quién le
@@ -27,6 +29,7 @@ export default function HouseholdPage() {
   const { client, userId, profile, categories, history, household, householdMembers, refreshHousehold, revision, bumpRevision } =
     useWorkspace();
   const toast = useToast();
+  const { can } = usePlan();
   const currency = profile.base_currency;
 
   const [range, setRange] = React.useState(() => monthRange());
@@ -55,6 +58,25 @@ export default function HouseholdPage() {
 
   const total = (balances.data ?? []).reduce((acc, row) => acc + row.paid, 0);
   const settlements = React.useMemo(() => settleBalances(balances.data ?? []), [balances.data]);
+
+  if (!can('household_members')) {
+    return (
+      <div className="space-y-5">
+        <header>
+          <h1 className="text-2xl font-semibold tracking-tight">Hogar</h1>
+          <p className="text-sm text-muted-foreground">
+            Para gastos compartidos: quién puso qué y cómo quedan las cuentas.
+          </p>
+        </header>
+        <UpgradeCard
+          feature="household_members"
+          icon={Users}
+          title="Los gastos compartidos no están en tu plan"
+          description="Repartí el supermercado, el alquiler y los servicios con quien convivís, y mirá quién le debe cuánto a quién. La otra persona no necesita tener cuenta."
+        />
+      </div>
+    );
+  }
 
   if (!household) {
     return (

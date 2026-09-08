@@ -11,6 +11,7 @@ import type { Category, CategoryTree, Subcategory } from '@/types/category';
 import type { CurrencyCode, ExchangeRate } from '@/types/currency';
 import type { Goal, GoalContribution, GoalProjection } from '@/types/goal';
 import type { AppNotification } from '@/types/notification';
+import type { PlanCode, PlanUsage, Subscription } from '@/types/plan';
 import type { Receipt, ReceiptItem } from '@/types/receipt';
 import type { DailyPoint, DashboardSummary, MonthlyPoint, RecurringExpense, ReportBundle } from '@/types/report';
 import type {
@@ -62,6 +63,7 @@ interface Database {
   recurring_overrides: Record<string, boolean>;
   notifications: AppNotification[];
   receipt_blobs: Record<string, string>;
+  subscription: Subscription | null;
 }
 
 interface StoredUser {
@@ -100,6 +102,7 @@ const emptyDb = (): Database => ({
   recurring_overrides: {},
   notifications: [],
   receipt_blobs: {},
+  subscription: null,
 });
 
 /**
@@ -962,6 +965,51 @@ export class LocalDataClient implements DataClient {
   async setRecurringConfirmed(userId: UUID, merchantKey: string, confirmed: boolean): Promise<void> {
     const db = this.db(userId);
     db.recurring_overrides[merchantKey] = confirmed;
+    this.writeDb(userId, db);
+  }
+
+  // --------------------------------------------------------------- planes
+
+  async getSubscription(userId: UUID): Promise<Subscription | null> {
+    const db = this.db(userId);
+    if (!db.subscription) {
+      // En modo demo arranca con todo desbloqueado: la idea es poder ver el producto
+      // entero. Desde Ajustes se puede bajar de plan para probar los límites.
+      db.subscription = {
+        id: uid(),
+        user_id: userId,
+        plan_code: 'hogar',
+        status: 'active',
+        current_period_end: null,
+        cancel_at_period_end: false,
+        provider: 'demo',
+        external_id: null,
+        created_at: new Date().toISOString(),
+      };
+      this.writeDb(userId, db);
+    }
+    return db.subscription;
+  }
+
+  async getPlanUsage(userId: UUID): Promise<PlanUsage> {
+    const db = this.db(userId);
+    const monthStart = `${new Date().toISOString().slice(0, 7)}-01`;
+    return {
+      transactions: db.transactions.filter((t) => t.source !== 'seed' && t.created_at.slice(0, 10) >= monthStart).length,
+      receipts: db.receipts.filter((r) => r.created_at.slice(0, 10) >= monthStart).length,
+      ai_queries: db.ai_interactions.filter(
+        (a) => (a.kind === 'query' || a.provider !== 'mock') && a.created_at.slice(0, 10) >= monthStart,
+      ).length,
+      budgets: db.budgets.filter((b) => b.is_active).length,
+      goals: db.goals.filter((g) => !g.is_archived).length,
+      household_members: db.household_members.filter((m) => m.is_active).length,
+    };
+  }
+
+  async setDemoPlan(userId: UUID, plan: PlanCode): Promise<void> {
+    const db = this.db(userId);
+    const current = (await this.getSubscription(userId))!;
+    db.subscription = { ...current, plan_code: plan, status: 'active' };
     this.writeDb(userId, db);
   }
 

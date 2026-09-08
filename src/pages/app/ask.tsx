@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryPieChart, HorizontalBarChart } from '@/components/finance/charts';
+import { UpgradeCard, QuotaNotice } from '@/components/billing/upgrade-card';
+import { usePlan } from '@/hooks/use-plan';
 
 interface Entry extends AiQueryAnswer {
   id: string;
@@ -20,14 +22,16 @@ interface Entry extends AiQueryAnswer {
  * own rows; the model, when configured, only rewrites the sentence around them.
  */
 export default function AskPage() {
-  const { client, userId, history, categories, profile } = useWorkspace();
+  const { client, userId, history, categories, profile, refreshPlan } = useWorkspace();
+  const { quota } = usePlan();
+  const queriesQuota = quota('ai_queries_per_month');
   const [question, setQuestion] = React.useState('');
   const [entries, setEntries] = React.useState<Entry[]>([]);
   const [loading, setLoading] = React.useState(false);
 
   const ask = async (value: string) => {
     const text = value.trim();
-    if (!text) return;
+    if (!text || queriesQuota.exhausted) return;
     setLoading(true);
     setQuestion('');
 
@@ -40,6 +44,21 @@ export default function AskPage() {
     setEntries((current) => [entry, ...current]);
 
     const provider = getAiProvider(profile.ai.provider_override);
+
+    // Toda consulta cuenta para el cupo, la resuelva el motor local o un modelo.
+    await client
+      .logAiInteraction(userId, {
+        kind: 'query',
+        provider: provider.id,
+        model: provider.model,
+        input: text,
+        output: answer.answer,
+        confidence: null,
+        latency_ms: 0,
+        success: true,
+      })
+      .catch(() => undefined);
+    await refreshPlan().catch(() => undefined);
     if (!provider.isMock && profile.ai.share_data_with_ai) {
       const started = performance.now();
       try {
@@ -78,6 +97,17 @@ export default function AskPage() {
         </p>
       </header>
 
+      {queriesQuota.exhausted ? (
+        <UpgradeCard
+          feature="ai_queries_per_month"
+          icon={MessagesSquare}
+          title="Usaste todas las consultas de este mes"
+          description={`Tu plan incluye ${queriesQuota.limit} consultas por mes. El cupo se renueva el primero del mes que viene.`}
+        />
+      ) : null}
+
+      <QuotaNotice feature="ai_queries_per_month" label="consultas" />
+
       <Card>
         <form
           className="flex items-center gap-2 p-2 pl-4"
@@ -94,7 +124,12 @@ export default function AskPage() {
             className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             aria-label="Pregunta sobre tus finanzas"
           />
-          <Button type="submit" size="icon" disabled={!question.trim() || loading} aria-label="Preguntar">
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!question.trim() || loading || queriesQuota.exhausted}
+            aria-label="Preguntar"
+          >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </form>

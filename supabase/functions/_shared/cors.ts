@@ -26,7 +26,7 @@ export function rateLimit(key: string, limit = 30, windowMs = 60_000): boolean {
 }
 
 /** Resolves the caller from the Authorization header; anonymous callers are rejected. */
-export async function requireUser(request: Request): Promise<{ id: string } | null> {
+export async function requireUser(request: Request): Promise<{ id: string; email: string; token: string } | null> {
   const authorization = request.headers.get('Authorization') ?? '';
   const token = authorization.replace(/^Bearer\s+/i, '');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -37,5 +37,26 @@ export async function requireUser(request: Request): Promise<{ id: string } | nu
   });
   if (!response.ok) return null;
   const user = await response.json();
-  return user?.id ? { id: user.id } : null;
+  return user?.id ? { id: user.id, email: user.email ?? '', token } : null;
+}
+
+/**
+ * Descuenta una consulta del cupo del plan ANTES de gastar en el proveedor.
+ * Devuelve el mensaje de error cuando no queda cupo, o null si se puede seguir.
+ */
+export async function checkAiQuota(token: string): Promise<string | null> {
+  const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/consume_ai_quota`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Authorization: `Bearer ${token}`,
+    },
+    body: '{}',
+  });
+
+  if (response.ok) return null;
+
+  const payload = (await response.json().catch(() => ({}))) as { message?: string };
+  return payload.message ?? 'Se agotaron las consultas con IA de tu plan.';
 }

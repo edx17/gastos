@@ -171,6 +171,69 @@ cambiar esas dos variables — el código no se toca.
 
 ---
 
+## 3.7 Cobrar suscripciones (opcional)
+
+Los planes ya están en la base y sus límites se aplican del lado del servidor. Falta
+sólo conectar el cobro. En Argentina lo que sirve para cobrar en pesos es
+**Mercado Pago** (Stripe no procesa ARS).
+
+### Qué hay hecho
+
+| Pieza | Estado |
+| --- | --- |
+| Catálogo de planes y límites | ✅ en `src/constants/plans.ts` y la tabla `plans` |
+| Límites aplicados en la base (triggers) | ✅ probado |
+| Pantalla de precios y candados en la interfaz | ✅ |
+| Función `create-subscription` (genera el link de pago) | ✅ falta tu credencial |
+| Función `subscription-webhook` (activa el plan al cobrar) | ✅ falta tu credencial |
+
+### Configurarlo
+
+1. En [Mercado Pago Developers](https://www.mercadopago.com.ar/developers) creá una
+   aplicación y copiá el **Access Token** de producción.
+2. Configurá el webhook apuntando a:
+   `https://<tu-ref>.supabase.co/functions/v1/subscription-webhook`
+   y copiá la **clave secreta** que Mercado Pago genera para firmar las notificaciones.
+3. Cargá los secretos y desplegá:
+
+```powershell
+supabase secrets set MERCADOPAGO_ACCESS_TOKEN=APP_USR-... MERCADOPAGO_WEBHOOK_SECRET=... ALLOWED_ORIGIN=https://tu-app.vercel.app
+supabase functions deploy create-subscription
+supabase functions deploy subscription-webhook
+```
+
+El webhook **no** lleva `verify_jwt` (Mercado Pago no manda un token de Supabase):
+la autenticidad se comprueba con la firma del propio proveedor, y sin esa firma la
+función rechaza el pedido. Es la única pieza que puede cambiar el plan de una cuenta.
+
+### Dar un plan a mano
+
+Útil para vos, para probar o para un cliente que te pagó por transferencia:
+
+```sql
+insert into public.subscriptions (user_id, plan_code, status, current_period_end, provider)
+values ('<user_id>', 'personal', 'active', now() + interval '1 month', 'manual')
+on conflict (user_id) do update
+set plan_code = excluded.plan_code,
+    status = excluded.status,
+    current_period_end = excluded.current_period_end;
+```
+
+### Antes de cobrarle a alguien
+
+Esto ya no es programación, pero conviene tenerlo resuelto:
+
+- **Facturación**: para cobrar de forma habitual necesitás estar inscripto (monotributo
+  o responsable inscripto) y emitir factura por cada cobro.
+- **Términos y condiciones + política de privacidad**: obligatorias si manejás datos
+  financieros de terceros, y Mercado Pago las pide.
+- **Costo por usuario**: cada ticket leído con un modelo de visión y cada consulta a la
+  IA te cuestan plata. Los cupos de cada plan están puestos para que el plan más barato
+  no te deje en rojo, pero revisá los números con el proveedor que elijas antes de
+  publicar precios.
+
+---
+
 ## 4. Vercel (opcional, para publicarla)
 
 Sólo si querés la app en internet, con una URL para abrir desde el celular.

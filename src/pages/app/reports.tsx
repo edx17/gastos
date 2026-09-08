@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Link } from 'react-router-dom';
 import { BarChart3, Bug, Store, TrendingUp } from 'lucide-react';
 import { lastNMonths, monthRange, previousRange } from '@/lib/date';
 import { formatMoney, formatPercent } from '@/lib/money';
@@ -15,6 +16,8 @@ import { DateRangePicker } from '@/components/finance/date-range-picker';
 import { FilterBar } from '@/components/finance/filter-bar';
 import { AiInsightCard } from '@/components/finance/ai-insight';
 import { ErrorNote } from '@/components/finance/error-note';
+import { UpgradeCard } from '@/components/billing/upgrade-card';
+import { usePlan } from '@/hooks/use-plan';
 import {
   CategoryPieChart,
   ChartCard,
@@ -26,14 +29,20 @@ import {
 
 export default function ReportsPage() {
   const { client, userId, profile, categories, history, revision } = useWorkspace();
+  const { can, plan, earliestReportDate } = usePlan();
   const currency = profile.base_currency;
+  const historyFloor = earliestReportDate();
   const [range, setRange] = React.useState(() => monthRange());
   const [filters, setFilters] = React.useState<TransactionFilters>({});
   const [months, setMonths] = React.useState<3 | 6 | 12>(6);
 
+  // El plan define hasta dónde se puede mirar hacia atrás.
+  const cappedFrom = range.from < historyFloor ? historyFloor : range.from;
+  const historyCapped = range.from < historyFloor;
+
   const effectiveFilters = React.useMemo<TransactionFilters>(
-    () => ({ ...filters, from: range.from, to: range.to }),
-    [filters, range],
+    () => ({ ...filters, from: cappedFrom, to: range.to }),
+    [filters, cappedFrom, range.to],
   );
 
   const bundle = useAsync(
@@ -67,6 +76,19 @@ export default function ReportsPage() {
 
       <DateRangePicker value={range} onChange={setRange} />
       <FilterBar filters={filters} onChange={setFilters} showSearch={false} showSort={false} />
+
+      {historyCapped ? (
+        <p className="rounded-md bg-warning/10 px-3 py-2 text-sm">
+          El plan {plan.name} muestra{' '}
+          {plan.limits.report_history_months === 1
+            ? 'el mes en curso'
+            : `${plan.limits.report_history_months} meses de historia`}
+          . Estás viendo desde el {cappedFrom}.{' '}
+          <Link to="/app/plans" className="font-medium text-primary hover:underline">
+            Ver planes
+          </Link>
+        </p>
+      ) : null}
 
       {bundle.error ? <ErrorNote error={bundle.error} onRetry={bundle.reload} /> : null}
 
@@ -258,6 +280,14 @@ export default function ReportsPage() {
         </>
       ) : null}
 
+      {!can('ai_insights') ? (
+        <UpgradeCard
+          feature="ai_insights"
+          icon={TrendingUp}
+          title="El análisis de hábitos no está en tu plan"
+          description="Detecta en qué se te va la plata, qué subió respecto del mes pasado, tus suscripciones y los gastos hormiga que no ves."
+        />
+      ) : (
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-primary" />
@@ -278,8 +308,9 @@ export default function ReportsPage() {
           ) : null}
         </div>
       </section>
+      )}
 
-      {recurring.data?.length ? (
+      {can('ai_insights') && recurring.data?.length ? (
         <Card>
           <CardHeader>
             <CardTitle>Gastos recurrentes detectados</CardTitle>

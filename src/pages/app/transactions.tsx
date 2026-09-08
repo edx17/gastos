@@ -18,11 +18,14 @@ import { TransactionRow } from '@/components/finance/transaction-row';
 import { TransactionForm } from '@/components/finance/transaction-form';
 import { ErrorNote } from '@/components/finance/error-note';
 import { ImportCsvDialog } from '@/components/finance/import-csv';
+import { QuotaNotice } from '@/components/billing/upgrade-card';
+import { usePlan } from '@/hooks/use-plan';
 import { exportTransactionsCsv } from '@/services/reports/export';
 
 export default function TransactionsPage() {
   const { client, userId, categories, paymentMethods, profile, revision, bumpRevision, refreshHistory } = useWorkspace();
   const toast = useToast();
+  const { can } = usePlan();
   const [searchParams, setSearchParams] = useSearchParams();
   const focusId = searchParams.get('focus');
 
@@ -78,6 +81,13 @@ export default function TransactionsPage() {
             variant="outline"
             size="sm"
             onClick={() => {
+              if (!can('csv_export')) {
+                toast.info(
+                  'La exportación está en los planes pagos',
+                  'Desde el plan Personal podés bajar tus movimientos en CSV.',
+                );
+                return;
+              }
               if (!page.data?.rows.length) return;
               exportTransactionsCsv(page.data.rows, categories);
               toast.success('Exportación lista', 'Descargamos los movimientos del período.');
@@ -93,6 +103,7 @@ export default function TransactionsPage() {
         </div>
       </header>
 
+      <QuotaNotice feature="transactions_per_month" label="movimientos" />
       <DateRangePicker value={range} onChange={setRange} />
       <FilterBar filters={filters} onChange={setFilters} />
 

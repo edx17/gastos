@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BarChart3,
   Camera,
+  Check,
   Coins,
   PiggyBank,
   Receipt,
@@ -12,6 +13,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { brand } from '@/config/brand';
+import { PLANS } from '@/constants/plans';
 import { parseIntent } from '@/services/nlp/parser';
 import { formatMoney } from '@/lib/money';
 import { humanDate } from '@/lib/date';
@@ -42,6 +44,9 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Logo />
           <div className="flex items-center gap-2">
+            <a href="#precios" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+              Precios
+            </a>
             <Link to="/login" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
               Entrar
             </Link>
@@ -136,6 +141,52 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
+        </section>
+
+        <section id="precios" className="mx-auto max-w-6xl px-4 py-14">
+          <h2 className="text-2xl font-semibold tracking-tight">Precios</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Empezá gratis. Cambiás de plan cuando la app se haya ganado el lugar, no antes.
+          </p>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {PLANS.map((plan) => (
+              <Card key={plan.code} className={plan.featured ? 'p-5 ring-2 ring-primary/40' : 'p-5'}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold">{plan.name}</p>
+                  {plan.featured ? <Badge>Más elegido</Badge> : null}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{plan.tagline}</p>
+                <p className="num mt-4 text-2xl font-semibold">
+                  {plan.price === 0 ? 'Gratis' : formatMoney(plan.price, { currency: plan.currency })}
+                  {plan.price > 0 ? (
+                    <span className="text-sm font-normal text-muted-foreground"> /mes</span>
+                  ) : null}
+                </p>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {plan.highlights.slice(0, 5).map((line) => (
+                    <li key={line} className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to="/register"
+                  className={buttonVariants({
+                    variant: plan.featured ? 'default' : 'secondary',
+                    className: 'mt-5 w-full',
+                  })}
+                >
+                  {plan.price === 0 ? 'Empezar gratis' : `Probar ${plan.name}`}
+                </Link>
+              </Card>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Precios en pesos argentinos, por mes. Se puede cancelar cuando quieras y seguís teniendo
+            acceso hasta el final del período pago.
+          </p>
         </section>
 
         <section className="mx-auto max-w-6xl px-4 py-14">

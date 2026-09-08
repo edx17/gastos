@@ -31,6 +31,7 @@ en toda la aplicación.
 | Interfaz claymorphism, con modo claro y oscuro | ✅ |
 | Auth completa: registro, login, recuperación de contraseña y Google | ✅ (Google requiere credenciales, ver deploy) |
 | Modo pareja / hogar: gastos compartidos, quién pagó y balance | ✅ |
+| Planes y suscripciones con límites aplicados en la base | ✅ (el cobro requiere credenciales de Mercado Pago) |
 
 ---
 
@@ -203,7 +204,7 @@ src/
 
 Rutas: `/`, `/login`, `/register`, `/forgot-password`, y bajo `/app`:
 `dashboard`, `transactions`, `reports`, `categories`, `budgets`, `goals`,
-`receipts`, `calendar`, `ask`, `household`, `settings`.
+`receipts`, `calendar`, `ask`, `household`, `plans`, `settings`.
 
 ---
 
@@ -235,6 +236,8 @@ node smoke.mjs ./capturas   # recorrido end-to-end real con Playwright
 - **Importación CSV**: separadores, comillas, duplicados y filas inválidas.
 - **Modo hogar**: reparto por partes desiguales, gastos sin atribuir y las
   transferencias mínimas para quedar a mano.
+- **Planes**: vencimiento de suscripciones, cupos agotados, funciones no incluidas y
+  qué plan sugerir en cada caso.
 - **Dataset de demostración**: coherencia y determinismo.
 
 El SQL se verifica aparte con `scripts/verify-sql.sh` (incluye pruebas de RLS).
@@ -281,6 +284,8 @@ para el modo oscuro.
   modelo: necesita conocer cómo habla la gente acá. La IA entra cuando hay ambigüedad.
 - **Nada se guarda a espaldas del usuario.** Si falta el importe o no se entiende el
   gasto, la app pregunta en vez de inventar.
+- **Los límites de plan viven en la base, no en la interfaz.** Los candados que se
+  ven son cortesía; quien intente saltearlos por la API se choca con un trigger.
 - **Los números salen de la base.** Los reportes se agregan en SQL; el navegador no
   descarga miles de filas para sumar.
 - **Subir no siempre es bueno.** Las comparativas saben que +15% de ingresos es una

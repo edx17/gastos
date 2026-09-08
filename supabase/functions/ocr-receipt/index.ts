@@ -4,7 +4,7 @@
  * Recibe {provider, image} (base64 sin encabezado) y devuelve {text, confidence}.
  * El parsing del ticket ocurre en el cliente: acá sólo se transcribe.
  */
-import { corsHeaders, jsonResponse, rateLimit, requireUser } from '../_shared/cors.ts';
+import { checkAiQuota, corsHeaders, jsonResponse, rateLimit, requireUser } from '../_shared/cors.ts';
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const VISION_PROMPT = `Transcribí COMPLETO el texto de este ticket o factura, respetando líneas y columnas.
@@ -19,6 +19,10 @@ Deno.serve(async (request) => {
   if (!rateLimit(`ocr:${caller.id}`, 20)) {
     return jsonResponse({ error: 'Demasiadas imágenes seguidas. Esperá un minuto.' }, 429);
   }
+
+  // El cupo del plan se controla acá, antes de pagarle al proveedor de visión.
+  const overQuota = await checkAiQuota(caller.token);
+  if (overQuota) return jsonResponse({ error: overQuota, code: 'PLAN_LIMIT' }, 402);
 
   let body: { provider?: string; image?: string };
   try {

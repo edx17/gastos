@@ -8,6 +8,7 @@ import type { Transaction, TransactionInput, TransactionType } from '@/types/tra
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select, Switch, Textarea } from '@/components/ui/input';
 import { CurrencySelector } from './currency-selector';
+import { usePlan } from '@/hooks/use-plan';
 
 const TYPES: { value: TransactionType; label: string }[] = [
   { value: 'expense', label: 'Gasto' },
@@ -32,6 +33,7 @@ export function TransactionForm({
   saving?: boolean;
 }) {
   const { categories, paymentMethods, profile, rules, history, household, householdMembers } = useWorkspace();
+  const { can } = usePlan();
 
   const [type, setType] = React.useState<TransactionType>((initial?.type as TransactionType) ?? 'expense');
   const [amount, setAmount] = React.useState(initial?.amount ? String(initial.amount) : '');
@@ -109,7 +111,9 @@ export function TransactionForm({
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
           />
-          <CurrencySelector value={currency} onChange={setCurrency} className="w-32" />
+          {can('multi_currency') ? (
+            <CurrencySelector value={currency} onChange={setCurrency} className="w-32" />
+          ) : null}
         </div>
       </div>
 

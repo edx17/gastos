@@ -17,9 +17,12 @@ import { Progress } from '@/components/ui/progress';
 import { SkeletonCard } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { buttonVariants } from '@/components/ui/button';
+import { QuotaNotice } from '@/components/billing/upgrade-card';
+import { usePlan } from '@/hooks/use-plan';
 
 export default function DashboardPage() {
   const { client, userId, profile, categories, paymentMethods, history, revision, bumpRevision } = useWorkspace();
+  const { can } = usePlan();
   const range = React.useMemo(() => monthRange(), []);
   const currency = profile.base_currency;
 
@@ -53,6 +56,7 @@ export default function DashboardPage() {
         </p>
       </header>
 
+      <QuotaNotice feature="transactions_per_month" label="movimientos" />
       <NaturalLanguageInput onSaved={() => bumpRevision()} />
 
       {dashboard.error ? <ErrorNote error={dashboard.error} onRetry={dashboard.reload} /> : null}
@@ -186,7 +190,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {insights.length ? (
+      {can('ai_insights') && insights.length ? (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold tracking-tight">Análisis inteligente</h2>

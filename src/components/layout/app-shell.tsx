@@ -15,6 +15,7 @@ import {
   Search,
   Settings,
   Sun,
+  Sparkles,
   Tags,
   Target,
   Users,
@@ -44,6 +45,7 @@ const NAV = [
   { to: '/app/calendar', label: 'Calendario', icon: CalendarDays },
   { to: '/app/ask', label: 'Preguntar', icon: MessagesSquare },
   { to: '/app/household', label: 'Hogar', icon: Users },
+  { to: '/app/plans', label: 'Planes', icon: Sparkles },
 ];
 
 const MOBILE_NAV = [

@@ -95,6 +95,104 @@ begin
   raise notice 'OK · RLS: aislamiento entre cuentas verificado';
 end $$;
 
+-- Planes: los límites se aplican en la base, no sólo en la interfaz.
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  plan text;
+  usage record;
+begin
+  select public.current_plan_code() into plan;
+  assert plan = 'free', format('Sin suscripción debería ser gratis, es %s', plan);
+
+  select * into usage from public.plan_usage();
+  -- Los datos de ejemplo no consumen cupo.
+  assert usage.transactions = 0, format('El seed no debería consumir cupo, cuenta %s', usage.transactions);
+
+  raise notice 'OK · plan: cuenta sin suscripción cae en gratis y el seed no gasta cupo';
+end $$;
+
+-- Una cuenta gratis no puede leer tickets por foto.
+do $$
+declare
+  blocked boolean := false;
+begin
+  begin
+    insert into public.receipts (user_id, currency, total)
+    values ('11111111-1111-4111-8111-111111111111', 'ARS', 1000);
+  exception when others then
+    blocked := true;
+    assert sqlerrm like '%plan Personal%', format('Mensaje inesperado: %s', sqlerrm);
+  end;
+  assert blocked, 'Una cuenta gratis pudo guardar un ticket';
+  raise notice 'OK · plan: los tickets quedan fuera del plan gratis';
+end $$;
+
+-- Y tampoco puede pasarse de los movimientos del mes.
+do $$
+declare
+  cat uuid;
+  i integer;
+  blocked boolean := false;
+begin
+  select id into cat from public.categories
+  where user_id = '11111111-1111-4111-8111-111111111111' and slug = 'alimentacion';
+
+  for i in 1..30 loop
+    insert into public.transactions (user_id, type, amount, base_amount, description, category_id, transaction_date, source)
+    values ('11111111-1111-4111-8111-111111111111', 'expense', 100, 100, 'Prueba de cupo', cat, current_date, 'manual');
+  end loop;
+
+  begin
+    insert into public.transactions (user_id, type, amount, base_amount, description, category_id, transaction_date, source)
+    values ('11111111-1111-4111-8111-111111111111', 'expense', 100, 100, 'Uno de más', cat, current_date, 'manual');
+  exception when others then
+    blocked := true;
+  end;
+
+  assert blocked, 'El plan gratis dejó pasar el movimiento 31 del mes';
+  raise notice 'OK · plan: el movimiento 31 del mes se corta en la base';
+end $$;
+
+-- Nadie se mejora el plan solo desde el navegador.
+do $$
+declare
+  inserted integer := 0;
+begin
+  begin
+    with intento as (
+      insert into public.subscriptions (user_id, plan_code, status)
+      values ('11111111-1111-4111-8111-111111111111', 'empresarial', 'active')
+      returning 1
+    )
+    select count(*) into inserted from intento;
+  exception when others then
+    inserted := 0;
+  end;
+  assert inserted = 0, 'Una cuenta pudo darse a sí misma un plan pago';
+  raise notice 'OK · plan: no se puede auto-asignar una suscripción';
+end $$;
+
+reset role;
+
+-- El cobro (webhook) sí puede: corre con la clave de servicio, fuera de las policies.
+insert into public.subscriptions (user_id, plan_code, status, current_period_end, provider, external_id)
+values ('11111111-1111-4111-8111-111111111111', 'hogar', 'active', now() + interval '30 days', 'mercadopago', 'preapproval-test')
+on conflict (user_id) do update set plan_code = excluded.plan_code, status = excluded.status;
+
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  plan text;
+begin
+  select public.current_plan_code() into plan;
+  assert plan = 'hogar', format('Con suscripción activa debería ser hogar, es %s', plan);
+  raise notice 'OK · plan: la suscripción activa desbloquea el plan Hogar';
+end $$;
+
 -- Modo hogar: quién puso cuánto y quién le debe a quién.
 set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
 

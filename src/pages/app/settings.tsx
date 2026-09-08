@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { Bell, Bot, Coins, CreditCard, Database, Shield, Trash2, User } from 'lucide-react';
+import { Bell, Bot, Coins, CreditCard, Database, Shield, Sparkles, Trash2, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { brand } from '@/config/brand';
 import { env } from '@/config/env';
 import { SUPPORTED_CURRENCIES, formatMoney } from '@/lib/money';
@@ -17,6 +18,11 @@ import { Input, Label, Select, Switch } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { CurrencySelector } from '@/components/finance/currency-selector';
+import { UsageMeter } from '@/components/billing/usage-meter';
+import { usePlan } from '@/hooks/use-plan';
+import { buttonVariants } from '@/components/ui/button';
+import { PLANS } from '@/constants/plans';
+import type { PlanCode } from '@/constants/plans';
 
 export default function SettingsPage() {
   const {
@@ -35,6 +41,8 @@ export default function SettingsPage() {
   } = useWorkspace();
   const toast = useToast();
   const { theme, setTheme } = useTheme();
+  const { plan, subscription } = usePlan();
+  const { refreshPlan } = useWorkspace();
 
   const notifications = useAsync(() => client.listNotifications(userId), [userId, revision]);
   const traces = useAsync(() => client.listAiInteractions(userId, 10), [userId, revision]);
@@ -50,6 +58,58 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Ajustes</h1>
         <p className="text-sm text-muted-foreground">Tu perfil, tus reglas y cómo se comporta la IA.</p>
       </header>
+
+      <Card>
+        <CardHeader className="flex-row items-center gap-2">
+          <Sparkles className="h-4 w-4 text-muted-foreground" />
+          <div className="flex-1">
+            <CardTitle>Plan {plan.name}</CardTitle>
+            <CardDescription>
+              {plan.price === 0
+                ? 'Estás usando la versión gratuita.'
+                : `${formatMoney(plan.price, { currency: plan.currency })} por mes${
+                    subscription?.current_period_end
+                      ? ` · se renueva el ${formatDate(subscription.current_period_end.slice(0, 10))}`
+                      : ''
+                  }`}
+            </CardDescription>
+          </div>
+          <Link to="/app/plans" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            Ver planes
+          </Link>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <UsageMeter feature="transactions_per_month" label="Movimientos del mes" />
+            <UsageMeter feature="receipts_per_month" label="Tickets del mes" />
+            <UsageMeter feature="ai_queries_per_month" label="Consultas del mes" />
+          </div>
+
+          {client.setDemoPlan ? (
+            <div className="space-y-1.5 rounded-md bg-warning/10 p-3">
+              <Label htmlFor="demo-plan">Probar otro plan (modo demo)</Label>
+              <Select
+                id="demo-plan"
+                value={plan.code}
+                onChange={async (event) => {
+                  await client.setDemoPlan?.(userId, event.target.value as PlanCode);
+                  await refreshPlan();
+                  toast.info('Plan cambiado', 'Sólo para ver cómo se comporta la app. No hay cobro.');
+                }}
+              >
+                {PLANS.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.name}
+                  </option>
+                ))}
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Cambiar de plan acá no cobra nada: sirve para ver los límites en acción.
+              </p>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex-row items-center gap-2">

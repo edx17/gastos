@@ -4,7 +4,7 @@
  * Existe para que las API keys vivan en el servidor y nunca lleguen al navegador.
  * Recibe {provider, model, system, user} y devuelve {text}.
  */
-import { corsHeaders, jsonResponse, rateLimit, requireUser } from '../_shared/cors.ts';
+import { checkAiQuota, corsHeaders, jsonResponse, rateLimit, requireUser } from '../_shared/cors.ts';
 
 interface CompletionRequest {
   provider: 'openai' | 'anthropic' | 'gemini';
@@ -24,6 +24,10 @@ Deno.serve(async (request) => {
   if (!rateLimit(`ai:${caller.id}`, 40)) {
     return jsonResponse({ error: 'Demasiados pedidos seguidos. Probá de nuevo en un minuto.' }, 429);
   }
+
+  // El cupo del plan se controla acá, antes de pagarle al proveedor.
+  const overQuota = await checkAiQuota(caller.token);
+  if (overQuota) return jsonResponse({ error: overQuota, code: 'PLAN_LIMIT' }, 402);
 
   let body: CompletionRequest;
   try {

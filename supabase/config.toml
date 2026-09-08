@@ -43,3 +43,11 @@ verify_jwt = true
 
 [functions.ocr-receipt]
 verify_jwt = true
+
+[functions.create-subscription]
+verify_jwt = true
+
+# Mercado Pago no manda un JWT de Supabase: la autenticidad se verifica con la
+# firma del propio proveedor dentro de la función.
+[functions.subscription-webhook]
+verify_jwt = false

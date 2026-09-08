@@ -14,11 +14,15 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog, Dialog } from '@/components/ui/dialog';
 import { ReceiptUploader } from '@/components/finance/receipt-uploader';
+import { UpgradeCard, QuotaNotice } from '@/components/billing/upgrade-card';
+import { usePlan } from '@/hooks/use-plan';
 import { ErrorNote } from '@/components/finance/error-note';
 
 export default function ReceiptsPage() {
   const { client, userId, revision, bumpRevision } = useWorkspace();
+  const { can, quota } = usePlan();
   const toast = useToast();
+  const receiptsQuota = quota('receipts_per_month');
   const receipts = useAsync(() => client.listReceipts(userId), [userId, revision]);
   const [preview, setPreview] = React.useState<{ receipt: Receipt; url: string | null } | null>(null);
   const [deleting, setDeleting] = React.useState<Receipt | null>(null);
@@ -33,13 +37,32 @@ export default function ReceiptsPage() {
         </p>
       </header>
 
-      <ReceiptUploader
-        onSaved={() => {
-          bumpRevision();
-          receipts.reload();
-          toast.success('Ticket registrado');
-        }}
-      />
+      {!can('receipts_per_month') ? (
+        <UpgradeCard
+          feature="receipts_per_month"
+          icon={ReceiptIcon}
+          title="La lectura de tickets no está en tu plan"
+          description="Sacás una foto y Crocante saca comercio, fecha, productos e importes, y los reparte por categoría."
+        />
+      ) : receiptsQuota.exhausted ? (
+        <UpgradeCard
+          feature="receipts_per_month"
+          icon={ReceiptIcon}
+          title="Usaste todos los tickets de este mes"
+          description={`Tu plan incluye ${receiptsQuota.limit} tickets por mes. El cupo se renueva el primero del mes que viene.`}
+        />
+      ) : (
+        <>
+          <QuotaNotice feature="receipts_per_month" label="tickets" />
+          <ReceiptUploader
+            onSaved={() => {
+              bumpRevision();
+              receipts.reload();
+              toast.success('Ticket registrado');
+            }}
+          />
+        </>
+      )}
 
       {receipts.error ? <ErrorNote error={receipts.error} onRetry={receipts.reload} /> : null}
 

@@ -23,6 +23,7 @@ import type {
   TransactionItem,
 } from '@/types/transaction';
 import type { AuthUser, Household, HouseholdBalance, HouseholdMember, Profile } from '@/types/user';
+import type { PlanCode, PlanUsage, Subscription } from '@/types/plan';
 
 export interface DateRangeInput {
   from: string;
@@ -131,6 +132,12 @@ export interface DataClient {
   getCalendar(userId: UUID, range: DateRangeInput): Promise<DailyPoint[]>;
   listRecurring(userId: UUID): Promise<RecurringExpense[]>;
   setRecurringConfirmed(userId: UUID, merchantKey: string, confirmed: boolean): Promise<void>;
+
+  // Planes y suscripción
+  getSubscription(userId: UUID): Promise<Subscription | null>;
+  getPlanUsage(userId: UUID): Promise<PlanUsage>;
+  /** Sólo en modo demo: permite probar cómo se ve cada plan. */
+  setDemoPlan?(userId: UUID, plan: PlanCode): Promise<void>;
 
   // Notifications
   listNotifications(userId: UUID): Promise<AppNotification[]>;

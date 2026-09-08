@@ -29,6 +29,9 @@ begin
     raise exception 'Necesito un user_id para generar los datos de ejemplo.';
   end if;
 
+  -- Los datos de ejemplo no son uso real: no consumen el cupo del plan.
+  perform set_config('crocante.skip_quota', 'on', true);
+
   perform public.seed_user_defaults(target);
 
   create temporary table if not exists demo_patterns (
@@ -159,7 +162,7 @@ begin
   insert into public.transactions (user_id, type, amount, currency, base_amount, base_currency, exchange_rate,
     description, category_id, subcategory_id, payment_method_id, transaction_date, source)
   values (target, 'expense', 200, 'USD', 296000, 'ARS', 1480,
-    'Compra de dólares', cat_id, sub_id, method_id, current_date - 30, 'manual');
+    'Compra de dólares', cat_id, sub_id, method_id, current_date - 30, 'seed');
   inserted := inserted + 1;
 
   -- Límites y metas de ejemplo.
