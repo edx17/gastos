@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { brand } from '@/config/brand';
 import { isDemoBackend } from '@/services/data';
 import { Logo } from '@/components/layout/logo';
-import { Badge } from '@/components/ui/badge';
 
 export function AuthLayout({
   title,
@@ -25,9 +24,14 @@ export function AuthLayout({
           <h1 className="mt-8 text-2xl font-semibold tracking-tight">{title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
           {isDemoBackend() ? (
-            <Badge variant="warning" className="mt-4">
-              Modo demo · los datos quedan en este navegador
-            </Badge>
+            <div className="mt-4 rounded-md bg-warning/10 p-3 text-xs">
+              <p className="font-medium text-foreground">Modo demo · sin servidor configurado</p>
+              <p className="mt-1 text-muted-foreground">
+                Los datos quedan en este navegador y no hay acceso con Google. Pasa cuando la
+                aplicación se compiló sin las variables <code>VITE_SUPABASE_URL</code> y{' '}
+                <code>VITE_SUPABASE_ANON_KEY</code>: hay que cargarlas y volver a desplegar.
+              </p>
+            </div>
           ) : null}
           <div className="mt-6">{children}</div>
           {footer ? <div className="mt-6 text-sm text-muted-foreground">{footer}</div> : null}

@@ -93,7 +93,11 @@ export function AppShell() {
           <Logo />
         </div>
         {isDemoBackend() ? (
-          <Badge variant="warning" className="mt-3 self-start">
+          <Badge
+            variant="warning"
+            className="mt-3 self-start"
+            title="La aplicación se compiló sin VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY: los datos quedan en este navegador."
+          >
             Modo demo · datos locales
           </Badge>
         ) : null}
