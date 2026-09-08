@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { brand } from '@/config/brand';
 import { env } from '@/config/env';
 import { SUPPORTED_CURRENCIES, formatMoney } from '@/lib/money';
-import { formatDate } from '@/lib/date';
+import { formatDate, formatDateFull } from '@/lib/date';
 import { isDemoBackend } from '@/services/data';
 import { OCR_PROVIDER_LABELS } from '@/services/ocr';
 import { useWorkspace } from '@/providers/workspace-provider';
@@ -72,7 +72,7 @@ export default function SettingsPage() {
                 ? 'Estás usando la versión gratuita.'
                 : `${formatMoney(plan.price, { currency: plan.currency })} por mes${
                     subscription?.current_period_end
-                      ? ` · se renueva el ${formatDate(subscription.current_period_end.slice(0, 10))}`
+                      ? ` · se renueva el ${formatDateFull(subscription.current_period_end.slice(0, 10))}`
                       : ''
                   }`}
             </CardDescription>
@@ -93,7 +93,7 @@ export default function SettingsPage() {
               <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
                 La renovación está dada de baja. Seguís con el plan {plan.name}
                 {subscription.current_period_end
-                  ? ` hasta el ${formatDate(subscription.current_period_end.slice(0, 10))}`
+                  ? ` hasta el ${formatDateFull(subscription.current_period_end.slice(0, 10))}`
                   : ''}
                 , y después pasás al plan gratuito sin perder tus datos.
               </p>
@@ -524,7 +524,7 @@ export default function SettingsPage() {
             toast.success(
               'Renovación dada de baja',
               result.accessUntil
-                ? `Tenés acceso hasta el ${formatDate(result.accessUntil.slice(0, 10))}.`
+                ? `Tenés acceso hasta el ${formatDateFull(result.accessUntil.slice(0, 10))}.`
                 : 'No se va a volver a cobrar.',
             );
           } catch (error) {

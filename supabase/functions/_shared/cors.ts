@@ -1,12 +1,17 @@
 /**
- * Orígenes habilitados, separados por coma en ALLOWED_ORIGIN.
+ * Orígenes habilitados en ALLOWED_ORIGIN.
  * Ejemplo: `https://crocante.vercel.app,http://localhost:5173`
- * Sin la variable se permite cualquiera, útil sólo mientras se prueba.
+ *
+ * Se acepta coma, espacio o punto y coma como separador: PowerShell interpreta
+ * la coma de un argumento sin comillas como separador de lista y termina
+ * guardando los valores unidos por espacios, y eso no debería romper nada.
+ *
+ * Sin la variable se permite cualquier origen, útil sólo mientras se prueba.
  */
 function allowedOrigins(): string[] {
   return (Deno.env.get('ALLOWED_ORIGIN') ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
+    .split(/[\s,;]+/)
+    .map((origin) => origin.trim().replace(/\/$/, ''))
     .filter(Boolean);
 }
 
@@ -18,7 +23,7 @@ export { allowedOrigins };
  */
 export function corsHeaders(request?: Request): Record<string, string> {
   const allowed = allowedOrigins();
-  const origin = request?.headers.get('Origin') ?? '';
+  const origin = (request?.headers.get('Origin') ?? '').replace(/\/$/, '');
 
   const value = !allowed.length ? '*' : allowed.includes(origin) ? origin : allowed[0];
 

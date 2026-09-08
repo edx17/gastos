@@ -3,7 +3,7 @@ import { Check, Sparkles } from 'lucide-react';
 import { PLANS } from '@/constants/plans';
 import type { PlanCode } from '@/constants/plans';
 import { formatMoney } from '@/lib/money';
-import { formatDate } from '@/lib/date';
+import { formatDateFull } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { isDemoBackend } from '@/services/data';
 import { startCheckout } from '@/services/billing/checkout';
@@ -49,7 +49,7 @@ export default function PlansPage() {
         <p className="text-sm text-muted-foreground">
           Estás en el plan <strong>{plan.name}</strong>
           {subscription?.current_period_end
-            ? ` · se renueva el ${formatDate(subscription.current_period_end.slice(0, 10))}`
+            ? ` · se renueva el ${formatDateFull(subscription.current_period_end.slice(0, 10))}`
             : ''}
           .
         </p>

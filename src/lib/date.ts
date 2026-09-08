@@ -33,6 +33,11 @@ export function formatDate(date: ISODate | Date, pattern = "d 'de' MMMM"): strin
   return format(d, pattern, { locale: es });
 }
 
+/** Con año: para vencimientos y renovaciones, donde omitirlo confunde. */
+export function formatDateFull(date: ISODate | Date): string {
+  return formatDate(date, "d 'de' MMMM 'de' yyyy");
+}
+
 export function formatDateShort(date: ISODate | Date): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
   return format(d, 'dd/MM/yy');
