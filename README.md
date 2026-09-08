@@ -32,6 +32,7 @@ en toda la aplicación.
 | Auth completa: registro, login, recuperación de contraseña y Google | ✅ (Google requiere credenciales, ver deploy) |
 | Modo pareja / hogar: gastos compartidos, quién pagó y balance | ✅ |
 | Planes y suscripciones con límites aplicados en la base | ✅ (el cobro requiere credenciales de Mercado Pago) |
+| Marco legal: términos, privacidad, arrepentimiento, baja y borrado de cuenta | ✅ (falta completar `src/config/legal.ts`) |
 
 ---
 

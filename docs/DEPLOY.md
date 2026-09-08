@@ -221,12 +221,32 @@ set plan_code = excluded.plan_code,
 
 ### Antes de cobrarle a alguien
 
-Esto ya no es programación, pero conviene tenerlo resuelto:
+**Completá `src/config/legal.ts`.** Razón social, CUIT y domicilio. Mientras digan
+«(completar)», las páginas legales muestran un aviso: es a propósito, para que no se
+publiquen a medias. La ley exige que quien vende online se identifique.
+
+Ya están resueltos en el código:
+
+- `/terminos` y `/privacidad`, redactados para este servicio (planes, IA, tickets,
+  bajas), enlazados desde la portada, el registro y Ajustes.
+- **Botón de arrepentimiento** en `/arrepentimiento`, accesible desde la portada como
+  pide la Resolución 424/2020, con el plazo de 10 días del art. 34 de la Ley 24.240.
+- **Baja de la suscripción en un clic** desde Ajustes → Plan, sin llamar a nadie
+  (función `cancel-subscription`).
+- **Eliminación de cuenta** desde Ajustes, que borra datos y tickets
+  (función `delete-account`).
+
+```powershell
+supabase functions deploy cancel-subscription
+supabase functions deploy delete-account
+```
+
+Lo que queda de tu lado, y no es programación:
 
 - **Facturación**: para cobrar de forma habitual necesitás estar inscripto (monotributo
   o responsable inscripto) y emitir factura por cada cobro.
-- **Términos y condiciones + política de privacidad**: obligatorias si manejás datos
-  financieros de terceros, y Mercado Pago las pide.
+- **Revisión legal**: los textos son un punto de partida sólido y honesto, no un
+  dictamen. Si vas a cobrarle a desconocidos, que los mire alguien de derecho.
 - **Costo por usuario**: cada ticket leído con un modelo de visión y cada consulta a la
   IA te cuestan plata. Los cupos de cada plan están puestos para que el plan más barato
   no te deje en rojo, pero revisá los números con el proveedor que elijas antes de

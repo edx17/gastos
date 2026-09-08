@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [withSampleData, setWithSampleData] = React.useState(false);
+  const [accepted, setAccepted] = React.useState(false);
   const [error, setError] = React.useState<AppError | null>(null);
   const [loading, setLoading] = React.useState(false);
 
@@ -23,6 +24,13 @@ export default function RegisterPage() {
     event.preventDefault();
     if (password.length < 8) {
       setError({ code: 'auth/weak-password', message: 'La contraseña necesita al menos 8 caracteres.' });
+      return;
+    }
+    if (!accepted) {
+      setError({
+        code: 'auth/terms-required',
+        message: 'Necesitamos que aceptes los términos y la política de privacidad para crear la cuenta.',
+      });
       return;
     }
     setLoading(true);
@@ -92,7 +100,27 @@ export default function RegisterPage() {
           </div>
           <Switch checked={withSampleData} onCheckedChange={setWithSampleData} />
         </div>
-        <Button type="submit" className="w-full" loading={loading}>
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]"
+            checked={accepted}
+            onChange={(event) => setAccepted(event.target.checked)}
+          />
+          <span className="text-muted-foreground">
+            Leí y acepto los{' '}
+            <Link className="text-primary hover:underline" to="/terminos" target="_blank">
+              términos y condiciones
+            </Link>{' '}
+            y la{' '}
+            <Link className="text-primary hover:underline" to="/privacidad" target="_blank">
+              política de privacidad
+            </Link>
+            .
+          </span>
+        </label>
+
+        <Button type="submit" className="w-full" disabled={!accepted} loading={loading}>
           Crear cuenta
         </Button>
       </form>

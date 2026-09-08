@@ -199,11 +199,31 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-border py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 text-sm text-muted-foreground sm:flex-row sm:justify-between">
-          <Logo />
-          <p>
-            {brand.name} · {new Date().getFullYear()} · Hecho para ordenar la plata, no para complicarla.
-          </p>
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 text-sm text-muted-foreground">
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+            <Logo />
+            <p>{brand.name} · {new Date().getFullYear()} · Hecho para ordenar la plata, no para complicarla.</p>
+          </div>
+          <nav className="flex flex-wrap justify-center gap-4 sm:justify-start">
+            <Link className="hover:text-foreground" to="/terminos">
+              Términos y condiciones
+            </Link>
+            <Link className="hover:text-foreground" to="/privacidad">
+              Política de privacidad
+            </Link>
+            {/* Resolución 424/2020: tiene que verse desde la portada. */}
+            <Link className="font-medium text-primary hover:underline" to="/arrepentimiento">
+              Botón de arrepentimiento
+            </Link>
+            <a
+              className="hover:text-foreground"
+              href="https://autogestion.produccion.gob.ar/consumidores"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Defensa del consumidor
+            </a>
+          </nav>
         </div>
       </footer>
     </div>

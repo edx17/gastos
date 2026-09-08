@@ -51,3 +51,9 @@ verify_jwt = true
 # firma del propio proveedor dentro de la función.
 [functions.subscription-webhook]
 verify_jwt = false
+
+[functions.cancel-subscription]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true

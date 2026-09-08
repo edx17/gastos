@@ -18,6 +18,7 @@ import { Input, Label, Select, Switch } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { CurrencySelector } from '@/components/finance/currency-selector';
+import { cancelSubscription, deleteAccount } from '@/services/billing/account';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { usePlan } from '@/hooks/use-plan';
 import { buttonVariants } from '@/components/ui/button';
@@ -50,6 +51,8 @@ export default function SettingsPage() {
   const [displayName, setDisplayName] = React.useState(profile.display_name);
   const [newMethod, setNewMethod] = React.useState('');
   const [resetting, setResetting] = React.useState(false);
+  const [cancelling, setCancelling] = React.useState(false);
+  const [deletingAccount, setDeletingAccount] = React.useState(false);
   const [rateDrafts, setRateDrafts] = React.useState<Record<string, string>>({});
 
   return (
@@ -84,6 +87,22 @@ export default function SettingsPage() {
             <UsageMeter feature="receipts_per_month" label="Tickets del mes" />
             <UsageMeter feature="ai_queries_per_month" label="Consultas del mes" />
           </div>
+
+          {plan.price > 0 && !isDemoBackend() ? (
+            subscription?.cancel_at_period_end ? (
+              <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+                La renovación está dada de baja. Seguís con el plan {plan.name}
+                {subscription.current_period_end
+                  ? ` hasta el ${formatDate(subscription.current_period_end.slice(0, 10))}`
+                  : ''}
+                , y después pasás al plan gratuito sin perder tus datos.
+              </p>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setCancelling(true)}>
+                Dar de baja la renovación
+              </Button>
+            )
+          ) : null}
 
           {client.setDemoPlan ? (
             <div className="space-y-1.5 rounded-md bg-warning/10 p-3">
@@ -443,6 +462,30 @@ export default function SettingsPage() {
             )}
           </div>
 
+          <div className="rounded-md border border-destructive/30 p-3">
+            <p className="text-sm font-medium">Eliminar mi cuenta</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Se borran tus movimientos, tickets, presupuestos y metas de forma definitiva. Si tenés una
+              suscripción activa, dala de baja antes.
+            </p>
+            <Button variant="destructive" size="sm" className="mt-3" onClick={() => setDeletingAccount(true)}>
+              <Trash2 className="h-4 w-4" />
+              Eliminar cuenta
+            </Button>
+          </div>
+
+          <nav className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+            <Link className="hover:text-foreground" to="/terminos">
+              Términos y condiciones
+            </Link>
+            <Link className="hover:text-foreground" to="/privacidad">
+              Política de privacidad
+            </Link>
+            <Link className="hover:text-foreground" to="/arrepentimiento">
+              Botón de arrepentimiento
+            </Link>
+          </nav>
+
           {client.seedDemoData ? (
             <div className="flex flex-wrap gap-2">
               <Button
@@ -467,6 +510,45 @@ export default function SettingsPage() {
       <p className="pb-4 text-center text-xs text-muted-foreground">
         {brand.name} · {brand.tagline}
       </p>
+
+      <ConfirmDialog
+        open={cancelling}
+        onClose={() => setCancelling(false)}
+        title="Dar de baja la renovación"
+        message={`Seguís usando el plan ${plan.name} hasta que termine el período que ya pagaste. Después pasás al plan gratuito y tus datos quedan donde están.`}
+        confirmLabel="Dar de baja"
+        onConfirm={async () => {
+          try {
+            const result = await cancelSubscription();
+            await refreshPlan();
+            toast.success(
+              'Renovación dada de baja',
+              result.accessUntil
+                ? `Tenés acceso hasta el ${formatDate(result.accessUntil.slice(0, 10))}.`
+                : 'No se va a volver a cobrar.',
+            );
+          } catch (error) {
+            toast.error('No pude dar de baja', error instanceof Error ? error.message : undefined);
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={deletingAccount}
+        onClose={() => setDeletingAccount(false)}
+        title="Eliminar la cuenta"
+        message="Se borra todo: movimientos, tickets, presupuestos, metas y la cuenta misma. No hay vuelta atrás."
+        confirmLabel="Eliminar para siempre"
+        destructive
+        onConfirm={async () => {
+          try {
+            await deleteAccount();
+            window.location.href = '/';
+          } catch (error) {
+            toast.error('No pude eliminar la cuenta', error instanceof Error ? error.message : undefined);
+          }
+        }}
+      />
 
       <ConfirmDialog
         open={resetting}
