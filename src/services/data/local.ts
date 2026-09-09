@@ -481,7 +481,9 @@ export class LocalDataClient implements DataClient {
         source: input.source ?? 'manual',
         ai_confidence: input.ai_confidence ?? null,
         receipt_id: input.receipt_id ?? null,
-        paid_by: input.paid_by ?? userId,
+        // `paid_by` es un integrante del hogar, no una cuenta: dejarlo en el
+        // id del usuario apunta a una fila que no existe.
+        paid_by: input.paid_by ?? null,
         created_by: userId,
         created_at: new Date().toISOString(),
       };

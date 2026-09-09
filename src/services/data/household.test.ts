@@ -78,3 +78,46 @@ describe('settleBalances', () => {
     ).toHaveLength(0);
   });
 });
+
+describe('quién pagó', () => {
+  it('deja "pagado por" vacío cuando el movimiento no es del hogar', async () => {
+    localStorage.clear();
+    const { LocalDataClient } = await import('./local');
+    const client = new LocalDataClient();
+    const user = await client.signUp(`quien-pago-${Date.now()}@crocante.test`, 'crocante-demo', 'Test');
+
+    const transaction = await client.createTransaction(user.id, {
+      type: 'expense',
+      amount: 4500,
+      currency: 'ARS',
+      description: 'super',
+      transaction_date: '2026-09-08',
+    });
+
+    // Apunta a un integrante del hogar, no a la cuenta: con el id del usuario
+    // señalaría una fila que no existe y el alta se cae contra la base.
+    expect(transaction.paid_by).toBeNull();
+    expect(transaction.paid_by).not.toBe(user.id);
+  });
+
+  it('respeta el integrante elegido', async () => {
+    localStorage.clear();
+    const { LocalDataClient } = await import('./local');
+    const client = new LocalDataClient();
+    const user = await client.signUp(`elegido-${Date.now()}@crocante.test`, 'crocante-demo', 'Test');
+    const household = await client.createHousehold(user.id, 'Casa');
+    const members = await client.listHouseholdMembers(household.id);
+
+    const transaction = await client.createTransaction(user.id, {
+      type: 'expense',
+      amount: 4500,
+      currency: 'ARS',
+      description: 'super',
+      transaction_date: '2026-09-08',
+      household_id: household.id,
+      paid_by: members[0].id,
+    });
+
+    expect(transaction.paid_by).toBe(members[0].id);
+  });
+});
