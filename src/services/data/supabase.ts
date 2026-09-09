@@ -1123,7 +1123,10 @@ function rowToProfile(row: any): Profile {
 }
 
 function dbError(error: PostgrestError) {
-  return err('db/error', describeDbError(error), undefined, error);
+  // El código y el detalle de Postgres quedan en la consola: son lo único que
+  // permite diagnosticar un fallo que la traducción no supo nombrar.
+  console.error('[crocante] db', error.code, error.message, error.details ?? '');
+  return err('db/error', describeDbError(error), error.hint ?? undefined, error);
 }
 
 function translateAuthError(message?: string): string {

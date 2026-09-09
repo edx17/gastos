@@ -18,3 +18,5 @@ supabase/.temp
 # supabase/migrations (Supabase intentaría aplicarlo como una migración más).
 crocante-migraciones.sql
 crocantemigraciones.sql
+# Caché de compilación de TypeScript: se regenera en cada build.
+tsconfig.tsbuildinfo

@@ -9,8 +9,6 @@ export const brand = {
   description:
     'Registrá gastos hablando normal, sacá una foto del ticket y mirá tus finanzas ordenadas sin llenar formularios.',
   supportEmail: 'hola@crocante.app',
-  /** Used by the mark in the sidebar / auth screens. */
-  initial: 'C',
 } as const;
 
 export type Brand = typeof brand;
