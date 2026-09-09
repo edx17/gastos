@@ -405,4 +405,34 @@ begin
   raise notice 'OK · RLS: las cuentas y su historial no cruzan entre personas';
 end $$;
 
+-- El reparto de categorías nuevas tiene que funcionar sobre cuentas que ya
+-- existen. Las migraciones corren antes que estas altas, así que si el bloque
+-- no se ejercita acá no se ejercita en ningún lado.
+reset role;
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  person uuid;
+  faltan integer;
+begin
+  for person in
+    select p.user_id
+    from public.profiles p
+    join auth.users u on u.id = p.user_id
+  loop
+    perform public.seed_user_defaults(person);
+  end loop;
+
+  select count(*) into faltan
+  from public.profiles p
+  where not exists (
+    select 1 from public.subcategories s
+    where s.user_id = p.user_id and s.slug = 'rendimientos'
+  );
+  assert faltan = 0, format('%s cuentas se quedaron sin la subcategoría nueva', faltan);
+
+  raise notice 'OK · taxonomía: la subcategoría nueva llega a las cuentas que ya existían';
+end $$;
+
 reset role;
