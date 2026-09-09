@@ -8,6 +8,7 @@ import { findDate } from './dates';
 import { findAmountCandidates, findWordAmount, pickBestAmount, type AmountCandidate } from './numbers';
 import { findMerchant } from './brands';
 import { describeExchange, findExchange, type ExchangeMatch } from './exchange';
+import { describeCardPayment, findCardPayment } from './card';
 
 export interface ParseContext {
   today?: Date;
@@ -48,6 +49,16 @@ const PAYMENT_PATTERNS: { re: RegExp; label: string }[] = [
   { re: /\btarjeta\b/, label: 'Tarjeta' },
   { re: /\bqr\b/, label: 'QR' },
 ];
+
+/**
+ * Los intereses que uno PAGA y los que uno COBRA se dicen igual.
+ * Sin más contexto gana «los cobré»: en una app de gastos, el interés que se
+ * paga suele venir adentro del resumen de la tarjeta y no se carga suelto,
+ * mientras que el rendimiento de la caja de ahorro o de Reservas sí.
+ */
+const INTEREST_PAID_RE = /\btarjeta\b|\bvisa\b|\bmaster ?card\b|\bamex\b|\bprestamo\b|\bpunitorio/;
+const INTEREST_EARNED_RE =
+  /\bintereses?\b|\brendimientos?\b|\bdividendos?\b|\brenta\b|\bplazo fijo\b|\bmoney market\b/;
 
 const TYPE_PATTERNS: { type: TransactionType; re: RegExp }[] = [
   { type: 'refund', re: /\bme devolvieron\b|\breintegro\b|\bdevolucion\b|\breembolso\b|\bcashback\b|\bme reintegraron\b/ },
@@ -96,10 +107,14 @@ export function parseIntent(input: string, ctx: ParseContext = {}): ParsedIntent
     });
   }
 
-  // 4. Merchant
+  // 4. ¿Es el pago del resumen de la tarjeta? Los consumos ya se cargaron uno
+  // por uno: si esto entrara como gasto, el mes quedaría contado dos veces.
+  const cardPayment = findCardPayment(withoutDate);
+
+  // 5. Merchant
   const merchantMatch = findMerchant(withoutDate);
 
-  // 5. Amount
+  // 6. Amount
   const digitCandidates = findAmountCandidates(withoutDate).filter(
     (c) => !merchantMatch || c.end <= merchantMatch.start || c.start >= merchantMatch.end,
   );
@@ -111,17 +126,21 @@ export function parseIntent(input: string, ctx: ParseContext = {}): ParsedIntent
     !digitCandidates.some((c) => c.hadSymbol || c.hadMultiplier || c.hadCurrencyWord) &&
     Math.max(...distinctValues) / Math.min(...distinctValues.filter((v) => v > 0)) < 5;
 
-  // 6. Type
-  const type = detectType(normalized);
-  const typeExplicit = TYPE_PATTERNS.some((p) => p.re.test(normalized));
+  // 7. Type
+  const type = cardPayment ? 'transfer' : detectType(normalized);
+  const typeExplicit =
+    Boolean(cardPayment) ||
+    TYPE_PATTERNS.some((p) => p.re.test(normalized)) ||
+    (INTEREST_EARNED_RE.test(normalized) && !INTEREST_PAID_RE.test(normalized));
 
-  // 7. Payment method
-  const paymentMethod = PAYMENT_PATTERNS.find((p) => p.re.test(normalized))?.label ?? null;
+  // 8. Payment method. Al resumen no se lo paga con la propia tarjeta.
+  const paymentMethod = cardPayment ? null : PAYMENT_PATTERNS.find((p) => p.re.test(normalized))?.label ?? null;
 
-  // 8. Description — what's left once the machine-readable bits are removed.
-  const description =
-    buildDescription(withoutDate, best, merchantMatch?.alias ?? null, merchantMatch?.name ?? null) ||
-    verbMeaning(normalized);
+  // 9. Description — what's left once the machine-readable bits are removed.
+  const description = cardPayment
+    ? describeCardPayment(cardPayment)
+    : buildDescription(withoutDate, best, merchantMatch?.alias ?? null, merchantMatch?.name ?? null) ||
+      verbMeaning(normalized);
 
   const missing: ParsedField[] = [];
   if (best === null || !Number.isFinite(best.value) || best.value <= 0) missing.push('amount');
@@ -150,6 +169,7 @@ export function parseIntent(input: string, ctx: ParseContext = {}): ParsedIntent
     description: finalDescription,
     merchant: merchantMatch?.name ?? null,
     payment_method: paymentMethod,
+    card_payment: Boolean(cardPayment),
     confidence: round(clamp(confidence, 0.05, 0.97), 2),
     missing,
     question: buildQuestion({ missing, amount, currency: currencyInfo.currency, type, ambiguousAmount, values: distinctValues }),
@@ -233,6 +253,10 @@ function detectCurrency(normalized: string, baseCurrency: CurrencyCode): { curre
 }
 
 function detectType(normalized: string): TransactionType {
+  // Un rendimiento cobrado entra antes que la regla general de gasto, pero
+  // después de que se nombre una tarjeta o un préstamo: ahí se está pagando.
+  if (INTEREST_EARNED_RE.test(normalized) && !INTEREST_PAID_RE.test(normalized)) return 'income';
+
   for (const pattern of TYPE_PATTERNS) {
     if (pattern.re.test(normalized)) return pattern.type;
   }

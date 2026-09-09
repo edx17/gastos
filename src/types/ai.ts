@@ -16,6 +16,11 @@ export interface ParsedIntent {
   merchant: string | null;
   payment_method: string | null;
   notes?: string | null;
+  /**
+   * El pago del resumen de la tarjeta. No es un gasto: los consumos ya se
+   * cargaron cuando se compraron, y contarlo otra vez duplicaría el mes.
+   */
+  card_payment?: boolean;
   /** Cuando la frase era una compra o venta de moneda extranjera. */
   exchange_kind?: ExchangeKind | null;
   /** La cotización, sólo si la persona la dijo. */

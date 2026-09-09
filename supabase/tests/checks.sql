@@ -322,4 +322,87 @@ begin
   end;
 end $$;
 
+-- Cuentas: saldo declarado, historial automático y patrimonio convertido.
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  fima uuid;
+  verdes uuid;
+  snapshots integer;
+  total numeric;
+  stamped date;
+begin
+  insert into public.accounts (user_id, name, currency, kind, balance, institution)
+  values (ana, 'FIMA Premium', 'ARS', 'investment', 2500000, 'Galicia')
+  returning id into fima;
+
+  insert into public.accounts (user_id, name, currency, kind, balance)
+  values (ana, 'Dólares en casa', 'USD', 'cash', 1000)
+  returning id into verdes;
+
+  -- El alta ya deja el primer punto del historial y sella la fecha.
+  select count(*) into snapshots from public.account_balances where account_id = fima;
+  assert snapshots = 1, format('El alta debería dejar un saldo en el historial, dejó %s', snapshots);
+
+  select balance_updated_at into stamped from public.accounts where id = fima;
+  assert stamped = current_date, format('La fecha del saldo quedó en %s', stamped);
+
+  -- Corregir el saldo el mismo día pisa el punto, no agrega uno nuevo.
+  update public.accounts set balance = 2600000 where id = fima;
+  select count(*) into snapshots from public.account_balances where account_id = fima;
+  assert snapshots = 1, format('Dos saldos para el mismo día: %s', snapshots);
+  assert (select balance from public.account_balances where account_id = fima) = 2600000,
+    'El historial no tomó la corrección';
+
+  -- Renombrar no toca el historial.
+  update public.accounts set name = 'FIMA' where id = fima;
+  select count(*) into snapshots from public.account_balances where account_id = fima;
+  assert snapshots = 1, format('Renombrar agregó un saldo: %s', snapshots);
+
+  -- Patrimonio: los pesos tal cual, los dólares a la cotización cargada.
+  insert into public.exchange_rates (user_id, base_currency, quote_currency, rate, rate_date)
+  values (ana, 'ARS', 'USD', 1500, current_date)
+  on conflict (user_id, base_currency, quote_currency, rate_date)
+  do update set rate = excluded.rate;
+
+  select public.net_worth() into total;
+  -- 2.600.000 + 1000 × 1500, más la cuenta principal que crea el alta (en cero).
+  assert total = 4100000, format('El patrimonio debería ser 4100000, da %s', total);
+
+  -- Una cuenta marcada para no sumar queda afuera.
+  update public.accounts set include_in_net_worth = false where id = verdes;
+  select public.net_worth() into total;
+  assert total = 2600000, format('Sin los dólares debería quedar 2600000, da %s', total);
+
+  raise notice 'OK · cuentas: saldo declarado, historial por día y patrimonio convertido';
+end $$;
+
+-- El historial de otra persona no se ve. Beto tiene el suyo (el alta le crea una
+-- cuenta), así que lo que se cuenta son los de Ana.
+set request.jwt.claim.sub = '22222222-2222-4222-8222-222222222222';
+
+do $$
+declare
+  ajenos integer;
+  updated integer;
+begin
+  select count(*) into ajenos from public.account_balances
+  where user_id = '11111111-1111-4111-8111-111111111111';
+  assert ajenos = 0, format('Beto ve %s saldos de Ana', ajenos);
+
+  select count(*) into ajenos from public.accounts
+  where user_id = '11111111-1111-4111-8111-111111111111';
+  assert ajenos = 0, format('Beto ve %s cuentas de Ana', ajenos);
+
+  with attempt as (
+    update public.accounts set balance = 999999 returning 1
+  )
+  select count(*) into updated from attempt;
+  assert updated <= 1, 'Beto pudo tocar saldos ajenos';
+
+  raise notice 'OK · RLS: las cuentas y su historial no cruzan entre personas';
+end $$;
+
 reset role;

@@ -5,6 +5,7 @@ import {
   Bell,
   CalendarDays,
   Home,
+  Landmark,
   LogOut,
   Menu,
   MessagesSquare,
@@ -37,6 +38,7 @@ import { QuickAddSheet } from '@/components/finance/quick-add-sheet';
 const NAV = [
   { to: '/app/dashboard', label: 'Inicio', icon: Home },
   { to: '/app/transactions', label: 'Movimientos', icon: Wallet },
+  { to: '/app/accounts', label: 'Cuentas', icon: Landmark },
   { to: '/app/reports', label: 'Reportes', icon: BarChart3 },
   { to: '/app/categories', label: 'Categorías', icon: Tags },
   { to: '/app/budgets', label: 'Límites', icon: PiggyBank },

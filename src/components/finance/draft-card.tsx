@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CalendarDays, Check, HelpCircle, Pencil, Sparkles, Store, X } from 'lucide-react';
+import { CalendarDays, Check, HelpCircle, Info, Pencil, Sparkles, Store, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatMoney, parseAmountInput } from '@/lib/money';
 import { currencyNoun, describeExchange } from '@/services/nlp/exchange';
@@ -21,6 +21,15 @@ const TYPE_LABELS: Record<TransactionType, string> = {
   transfer: 'Transferencia',
   refund: 'Reintegro',
   adjustment: 'Ajuste',
+};
+
+/** El género tiene que concordar: «Transferencia detectado» se lee mal. */
+const TYPE_HEADLINES: Record<TransactionType, string> = {
+  expense: 'Gasto detectado',
+  income: 'Ingreso detectado',
+  transfer: 'Transferencia detectada',
+  refund: 'Reintegro detectado',
+  adjustment: 'Ajuste detectado',
 };
 
 /**
@@ -130,7 +139,11 @@ export function DraftCard({
       <div className="flex items-center justify-between gap-2 border-b border-border bg-accent/40 px-4 py-2.5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Sparkles className="h-4 w-4 text-primary" />
-          {exchangeKind ? describeExchange(exchangeKind, currency) : `${TYPE_LABELS[type]} detectado`}
+          {exchangeKind
+            ? describeExchange(exchangeKind, currency)
+            : intent.card_payment
+              ? 'Pago de tarjeta'
+              : TYPE_HEADLINES[type]}
           <span className="text-xs font-normal text-muted-foreground">
             {Math.round(intent.confidence * 100)}% de confianza
           </span>
@@ -139,6 +152,16 @@ export function DraftCard({
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      {intent.card_payment ? (
+        <div className="flex items-start gap-2 border-b border-border bg-accent/30 px-4 py-3 text-xs text-muted-foreground">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+          <p>
+            Esto no cuenta como gasto del mes: los consumos ya los cargaste el día que compraste. Pagar el resumen
+            cancela esa deuda, no gasta plata nueva.
+          </p>
+        </div>
+      ) : null}
 
       {intent.question ? (
         <div className="flex items-start gap-2 border-b border-border bg-warning/10 px-4 py-3 text-sm">

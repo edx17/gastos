@@ -204,6 +204,7 @@ export const DEFAULT_CATEGORIES: SeedCategory[] = [
       { slug: 'sueldo', name: 'Sueldo', keywords: ['sueldo', 'salario', 'cobre el sueldo', 'aguinaldo', 'quincena', 'haberes'] },
       { slug: 'freelance', name: 'Freelance', keywords: ['freelance', 'factura', 'honorarios', 'changa', 'proyecto', 'cliente'] },
       { slug: 'ventas', name: 'Ventas', keywords: ['venta', 'vendi', 'marketplace', 'mercado libre venta'] },
+      { slug: 'rendimientos', name: 'Rendimientos', keywords: ['interes', 'intereses', 'rendimiento', 'rendimientos', 'renta', 'dividendos', 'plazo fijo', 'money market', 'fima', 'reservas'] },
       { slug: 'transferencias', name: 'Transferencias', keywords: ['transferencia recibida', 'me transfirieron', 'me pasaron'] },
       { slug: 'reintegros', name: 'Reintegros', keywords: ['reintegro', 'devolucion', 'me devolvieron', 'cashback', 'reembolso'] },
       { slug: 'otros-ingresos', name: 'Otros', keywords: ['otro ingreso', 'premio', 'regalo recibido', 'alquiler cobrado'] },

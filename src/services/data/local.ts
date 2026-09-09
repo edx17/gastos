@@ -16,6 +16,8 @@ import type { Receipt, ReceiptItem } from '@/types/receipt';
 import type { DailyPoint, DashboardSummary, MonthlyPoint, RecurringExpense, ReportBundle } from '@/types/report';
 import type {
   Account,
+  AccountBalancePoint,
+  AccountInput,
   Merchant,
   PaymentMethod,
   Transaction,
@@ -53,6 +55,8 @@ interface Database {
   transaction_items: TransactionItem[];
   payment_methods: PaymentMethod[];
   accounts: Account[];
+  /** Un saldo declarado por cuenta y por día, para ver la evolución. */
+  accountBalances: AccountBalancePoint[];
   merchants: Merchant[];
   receipts: Receipt[];
   receipt_items: ReceiptItem[];
@@ -92,6 +96,7 @@ const emptyDb = (): Database => ({
   transaction_items: [],
   payment_methods: [],
   accounts: [],
+  accountBalances: [],
   merchants: [],
   receipts: [],
   receipt_items: [],
@@ -598,7 +603,93 @@ export class LocalDataClient implements DataClient {
   }
 
   async listAccounts(userId: UUID): Promise<Account[]> {
-    return this.db(userId).accounts;
+    return this.db(userId)
+      .accounts.filter((account) => account.is_active)
+      .sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at));
+  }
+
+  async createAccount(userId: UUID, input: AccountInput): Promise<Account> {
+    const db = this.db(userId);
+    const account: Account = {
+      id: uid(),
+      user_id: userId,
+      name: input.name.trim(),
+      currency: input.currency,
+      kind: input.kind,
+      balance: round(input.balance, 2),
+      balance_updated_at: today(),
+      institution: input.institution?.trim() || null,
+      notes: input.notes?.trim() || null,
+      sort_order: db.accounts.length,
+      include_in_net_worth: input.include_in_net_worth ?? true,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+    db.accounts.push(account);
+    this.recordBalance(db, account);
+    this.writeDb(userId, db);
+    return account;
+  }
+
+  async updateAccount(id: UUID, patch: Partial<AccountInput> & { is_active?: boolean }): Promise<Account> {
+    const userId = this.requireSession();
+    const db = this.db(userId);
+    const account = db.accounts.find((row) => row.id === id);
+    if (!account) throw err('account/not-found', 'No encontré esa cuenta.');
+
+    const changedBalance = patch.balance !== undefined && round(patch.balance, 2) !== account.balance;
+    Object.assign(account, {
+      ...patch,
+      name: patch.name?.trim() ?? account.name,
+      institution: patch.institution === undefined ? account.institution : patch.institution?.trim() || null,
+      notes: patch.notes === undefined ? account.notes : patch.notes?.trim() || null,
+      balance: patch.balance === undefined ? account.balance : round(patch.balance, 2),
+    });
+    // Sólo cambiar el número mueve la fecha y deja un punto en el historial.
+    if (changedBalance) {
+      account.balance_updated_at = today();
+      this.recordBalance(db, account);
+    }
+    this.writeDb(userId, db);
+    return account;
+  }
+
+  async archiveAccount(id: UUID): Promise<void> {
+    const userId = this.requireSession();
+    const db = this.db(userId);
+    const account = db.accounts.find((row) => row.id === id);
+    if (account) account.is_active = false;
+    this.writeDb(userId, db);
+  }
+
+  async listAccountBalances(accountId: UUID): Promise<AccountBalancePoint[]> {
+    const db = this.db(this.requireSession());
+    return db.accountBalances
+      .filter((point) => point.account_id === accountId)
+      .sort((a, b) => b.recorded_on.localeCompare(a.recorded_on));
+  }
+
+  async getNetWorth(userId: UUID): Promise<number> {
+    const [accounts, rates] = await Promise.all([this.listAccounts(userId), this.getRateTable(userId)]);
+    return round(
+      accounts
+        .filter((account) => account.include_in_net_worth)
+        .reduce((acc, account) => acc + account.balance * (rates[account.currency] ?? 1), 0),
+      2,
+    );
+  }
+
+  /** Un saldo por cuenta y por día: corregirlo el mismo día pisa el anterior. */
+  private recordBalance(db: Database, account: Account) {
+    const recorded_on = today();
+    const existing = db.accountBalances.find(
+      (point) => point.account_id === account.id && point.recorded_on === recorded_on,
+    );
+    if (existing) {
+      existing.balance = account.balance;
+      return;
+    }
+    db.accountBalances.push({ id: uid(), account_id: account.id, balance: account.balance, recorded_on });
   }
 
   async listMerchants(userId: UUID): Promise<Merchant[]> {

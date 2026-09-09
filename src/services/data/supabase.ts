@@ -27,6 +27,8 @@ import type {
 } from '@/types/report';
 import type {
   Account,
+  AccountBalancePoint,
+  AccountInput,
   Merchant,
   PaymentMethod,
   Transaction,
@@ -489,9 +491,83 @@ export class SupabaseDataClient implements DataClient {
   }
 
   async listAccounts(userId: UUID): Promise<Account[]> {
-    const { data, error } = await this.db.from('accounts').select('*').eq('user_id', userId).eq('is_active', true);
+    const { data, error } = await this.db
+      .from('accounts')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('sort_order')
+      .order('created_at');
     if (error) throw dbError(error);
     return (data ?? []) as Account[];
+  }
+
+  async createAccount(userId: UUID, input: AccountInput): Promise<Account> {
+    const { count } = await this.db
+      .from('accounts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    const { data, error } = await this.db
+      .from('accounts')
+      .insert({
+        user_id: userId,
+        name: input.name.trim(),
+        currency: input.currency,
+        kind: input.kind,
+        balance: round(input.balance, 2),
+        institution: input.institution?.trim() || null,
+        notes: input.notes?.trim() || null,
+        sort_order: count ?? 0,
+        include_in_net_worth: input.include_in_net_worth ?? true,
+      })
+      .select()
+      .single();
+    if (error) throw dbError(error);
+    return data as Account;
+  }
+
+  async updateAccount(id: UUID, patch: Partial<AccountInput> & { is_active?: boolean }): Promise<Account> {
+    // La fecha del saldo y el historial los pone un disparador en la base: así
+    // vale igual si el número se corrige desde acá o desde el panel de Supabase.
+    const { data, error } = await this.db
+      .from('accounts')
+      .update({
+        ...patch,
+        ...(patch.name === undefined ? {} : { name: patch.name.trim() }),
+        ...(patch.balance === undefined ? {} : { balance: round(patch.balance, 2) }),
+        ...(patch.institution === undefined ? {} : { institution: patch.institution?.trim() || null }),
+        ...(patch.notes === undefined ? {} : { notes: patch.notes?.trim() || null }),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw dbError(error);
+    return data as Account;
+  }
+
+  async archiveAccount(id: UUID): Promise<void> {
+    const { error } = await this.db.from('accounts').update({ is_active: false }).eq('id', id);
+    if (error) throw dbError(error);
+  }
+
+  async listAccountBalances(accountId: UUID): Promise<AccountBalancePoint[]> {
+    const { data, error } = await this.db
+      .from('account_balances')
+      .select('id, account_id, balance, recorded_on')
+      .eq('account_id', accountId)
+      .order('recorded_on', { ascending: false })
+      .limit(180);
+    if (error) throw dbError(error);
+    return (data ?? []) as AccountBalancePoint[];
+  }
+
+  async getNetWorth(): Promise<number> {
+    // La conversión se hace en la base para que el número no dependa de qué
+    // cotizaciones tenga cargadas el navegador en ese momento.
+    const { data, error } = await this.db.rpc('net_worth');
+    if (error) throw dbError(error);
+    return round(Number(data ?? 0), 2);
   }
 
   async listMerchants(userId: UUID): Promise<Merchant[]> {

@@ -15,6 +15,8 @@ import type {
 } from '@/types/report';
 import type {
   Account,
+  AccountBalancePoint,
+  AccountInput,
   Merchant,
   PaymentMethod,
   Transaction,
@@ -87,6 +89,13 @@ export interface DataClient {
   createPaymentMethod(userId: UUID, input: Partial<PaymentMethod> & { name: string }): Promise<PaymentMethod>;
   updatePaymentMethod(id: UUID, patch: Partial<PaymentMethod>): Promise<PaymentMethod>;
   listAccounts(userId: UUID): Promise<Account[]>;
+  createAccount(userId: UUID, input: AccountInput): Promise<Account>;
+  updateAccount(id: UUID, patch: Partial<AccountInput> & { is_active?: boolean }): Promise<Account>;
+  archiveAccount(id: UUID): Promise<void>;
+  /** Los saldos declarados de una cuenta, del más reciente al más viejo. */
+  listAccountBalances(accountId: UUID): Promise<AccountBalancePoint[]>;
+  /** El total de todas las cuentas, pasado a la moneda base. */
+  getNetWorth(userId: UUID): Promise<number>;
   listMerchants(userId: UUID): Promise<Merchant[]>;
 
   // Receipts

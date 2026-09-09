@@ -96,12 +96,14 @@ export default function DashboardPage() {
               accent="savings"
               hint={`Tasa ${formatPercent(dashboard.data.period.savings_rate)}`}
             />
+            {/* No es "lo que tenés": es lo que sobró de lo que entró y salió desde
+                que usás la app. Lo que tenés está en Cuentas. */}
             <StatCard
-              label="Saldo acumulado"
+              label="Ahorro acumulado"
               value={dashboard.data.balance}
               currency={currency}
               icon={Wallet}
-              hint={`${dashboard.data.period.transaction_count} movimientos`}
+              hint="Desde que usás Crocante"
             />
           </div>
 

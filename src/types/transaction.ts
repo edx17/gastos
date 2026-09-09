@@ -110,14 +110,50 @@ export interface PaymentMethod {
   created_at: ISODateTime;
 }
 
+export type AccountKind = 'checking' | 'savings' | 'cash' | 'investment' | 'wallet';
+
+/**
+ * Un lugar donde hay plata: la caja de ahorro, el FIMA, Reservas de Mercado
+ * Pago, los dólares en el cajón.
+ *
+ * El saldo es declarado, no deducido de los movimientos: nadie carga en una app
+ * de gastos cada rendimiento ni cada transferencia entre cuentas propias.
+ */
 export interface Account {
   id: UUID;
   user_id: UUID;
   name: string;
-  currency: string;
-  kind: 'checking' | 'savings' | 'cash' | 'investment' | 'wallet';
+  currency: CurrencyCode;
+  kind: AccountKind;
+  balance: number;
+  /** Cuándo se actualizó el saldo por última vez. */
+  balance_updated_at?: ISODate | null;
+  /** El banco o la billetera: Galicia, Mercado Pago, Belo. */
+  institution?: string | null;
+  notes?: string | null;
+  sort_order: number;
+  /** Una tarjeta o una cuenta ajena puede querer verse sin sumar al total. */
+  include_in_net_worth: boolean;
   is_active: boolean;
   created_at: ISODateTime;
+}
+
+export interface AccountInput {
+  name: string;
+  currency: CurrencyCode;
+  kind: AccountKind;
+  balance: number;
+  institution?: string | null;
+  notes?: string | null;
+  include_in_net_worth?: boolean;
+}
+
+/** Un saldo declarado en una fecha, para ver la evolución. */
+export interface AccountBalancePoint {
+  id: UUID;
+  account_id: UUID;
+  balance: number;
+  recorded_on: ISODate;
 }
 
 export interface Merchant {

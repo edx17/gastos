@@ -20,6 +20,7 @@ const ReportsPage = lazy(() => import('@/pages/app/reports'));
 const CategoriesPage = lazy(() => import('@/pages/app/categories'));
 const BudgetsPage = lazy(() => import('@/pages/app/budgets'));
 const GoalsPage = lazy(() => import('@/pages/app/goals'));
+const AccountsPage = lazy(() => import('@/pages/app/accounts'));
 const ReceiptsPage = lazy(() => import('@/pages/app/receipts'));
 const CalendarPage = lazy(() => import('@/pages/app/calendar'));
 const AskPage = lazy(() => import('@/pages/app/ask'));
@@ -56,6 +57,7 @@ export default function App() {
                     <Route path="categories" element={<CategoriesPage />} />
                     <Route path="budgets" element={<BudgetsPage />} />
                     <Route path="goals" element={<GoalsPage />} />
+                    <Route path="accounts" element={<AccountsPage />} />
                     <Route path="receipts" element={<ReceiptsPage />} />
                     <Route path="calendar" element={<CalendarPage />} />
                     <Route path="ask" element={<AskPage />} />

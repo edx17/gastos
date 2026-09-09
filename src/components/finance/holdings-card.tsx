@@ -28,9 +28,12 @@ export function HoldingsCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Coins className="h-4 w-4 text-primary" />
-          Lo que tenés en otra moneda
+          Moneda extranjera que compraste
         </CardTitle>
-        <CardDescription>Comprar no es gastar: esto no entra en tus gastos del mes.</CardDescription>
+        <CardDescription>
+          Comprar no es gastar: esto no entra en tus gastos del mes. Cuenta lo que compraste menos lo que vendiste;
+          para el saldo real de tu caja de ahorro en dólares, cargala en Cuentas.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {holdings.map((holding) => {

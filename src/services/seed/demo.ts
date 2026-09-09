@@ -140,10 +140,35 @@ export function buildDemoDataset(userId: string, reference = new Date()): DemoDa
     { id: uid(), user_id: userId, name: 'Transferencia', kind: 'transfer', is_default: false, is_active: true, created_at: now },
   ];
 
+  // Con saldo, para que la demo muestre de qué se trata la pantalla de cuentas.
+  const account = (
+    name: string,
+    currency: 'ARS' | 'USD',
+    kind: Account['kind'],
+    balance: number,
+    institution: string,
+    sort: number,
+  ): Account => ({
+    id: uid(),
+    user_id: userId,
+    name,
+    currency,
+    kind,
+    balance,
+    balance_updated_at: format(reference, 'yyyy-MM-dd'),
+    institution,
+    notes: null,
+    sort_order: sort,
+    include_in_net_worth: true,
+    is_active: true,
+    created_at: now,
+  });
+
   const accounts: Account[] = [
-    { id: uid(), user_id: userId, name: 'Caja de ahorro $', currency: 'ARS', kind: 'savings', is_active: true, created_at: now },
-    { id: uid(), user_id: userId, name: 'Cuenta corriente', currency: 'ARS', kind: 'checking', is_active: true, created_at: now },
-    { id: uid(), user_id: userId, name: 'Caja de ahorro USD', currency: 'USD', kind: 'savings', is_active: true, created_at: now },
+    account('Caja de ahorro $', 'ARS', 'savings', 1_240_000, 'Galicia', 0),
+    account('FIMA Premium', 'ARS', 'investment', 2_600_000, 'Galicia', 1),
+    account('Reservas', 'ARS', 'wallet', 380_000, 'Mercado Pago', 2),
+    account('Dólares', 'USD', 'cash', 1_200, 'En casa', 3),
   ];
 
   const merchantNames = new Set<string>();
