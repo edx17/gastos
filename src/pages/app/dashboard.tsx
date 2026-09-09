@@ -7,6 +7,7 @@ import { useWorkspace } from '@/providers/workspace-provider';
 import { useAsync } from '@/hooks/use-async';
 import { buildInsights } from '@/services/analytics/insights';
 import { StatCard } from '@/components/finance/stat-card';
+import { HoldingsCard } from '@/components/finance/holdings-card';
 import { NaturalLanguageInput } from '@/components/finance/natural-language-input';
 import { TransactionRow } from '@/components/finance/transaction-row';
 import { AiInsightCard } from '@/components/finance/ai-insight';
@@ -21,7 +22,7 @@ import { QuotaNotice } from '@/components/billing/upgrade-card';
 import { usePlan } from '@/hooks/use-plan';
 
 export default function DashboardPage() {
-  const { client, userId, profile, categories, paymentMethods, history, revision, bumpRevision } = useWorkspace();
+  const { client, userId, profile, categories, paymentMethods, history, revision, bumpRevision, rates } = useWorkspace();
   const { can } = usePlan();
   const range = React.useMemo(() => monthRange(), []);
   const currency = profile.base_currency;
@@ -103,6 +104,10 @@ export default function DashboardPage() {
               hint={`${dashboard.data.period.transaction_count} movimientos`}
             />
           </div>
+
+          {dashboard.data.holdings.length ? (
+            <HoldingsCard holdings={dashboard.data.holdings} rates={rates} baseCurrency={currency} />
+          ) : null}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <ChartCard title="Gastos por categoría" description={range.label}>

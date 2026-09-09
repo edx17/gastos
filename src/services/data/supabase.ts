@@ -16,6 +16,7 @@ import type { PlanUsage, Subscription } from '@/types/plan';
 import type { Receipt, ReceiptItem } from '@/types/receipt';
 import type {
   CategoryBreakdown,
+  CurrencyHolding,
   DailyPoint,
   DashboardSummary,
   MonthlyPoint,
@@ -374,6 +375,7 @@ export class SupabaseDataClient implements DataClient {
         // `paid_by` es un integrante del hogar, no una cuenta: dejarlo en el
         // id del usuario apunta a una fila que no existe.
         paid_by: input.paid_by ?? null,
+        exchange_kind: input.exchange_kind ?? null,
         created_by: userId,
       };
     });
@@ -772,12 +774,14 @@ export class SupabaseDataClient implements DataClient {
     const profile = await this.getProfile(userId);
     const previous = previousRange({ ...range, label: '' });
 
-    const [current, before, categories, daily, balance] = await Promise.all([
+    const [current, before, categories, daily, balance, holdings] = await Promise.all([
       this.summaryRpc(range.from, range.to, profile.base_currency),
       this.summaryRpc(previous.from, previous.to, profile.base_currency),
       this.categoryRpc(range.from, range.to, previous),
       this.dailyRpc(range.from, range.to),
       this.db.rpc('account_balance'),
+      // Las tenencias se suman en la base: viaja una fila por moneda, no el historial.
+      this.db.rpc('currency_holdings'),
     ]);
 
     return {
@@ -791,6 +795,12 @@ export class SupabaseDataClient implements DataClient {
       balance: round(Number(balance.data ?? 0), 2),
       top_categories: categories.slice(0, 6),
       recent_days: daily,
+      holdings: ((holdings.data ?? []) as CurrencyHolding[]).map((row) => ({
+        currency: row.currency,
+        amount: Number(row.amount),
+        invested: Number(row.invested),
+        avg_rate: row.avg_rate === null ? null : Number(row.avg_rate),
+      })),
     };
   }
 

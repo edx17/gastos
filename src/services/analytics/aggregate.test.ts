@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { antExpenses, categoryBreakdown, compare, dailySeries, merchantRanking, monthlySeries, summarize } from './aggregate';
+import {
+  antExpenses,
+  categoryBreakdown,
+  compare,
+  currencyHoldings,
+  dailySeries,
+  merchantRanking,
+  monthlySeries,
+  runningBalance,
+  summarize,
+} from './aggregate';
 import { detectRecurring } from './recurring';
 import { makeCategories, makeTransaction } from '@/test/factories';
 
@@ -140,5 +150,57 @@ describe('recurring detection', () => {
       makeTransaction({ amount: 9500, base_amount: 9500, description: 'Spotify', merchant_name: 'Spotify', transaction_date: date }),
     );
     expect(detectRecurring(twice, 'user-1')).toHaveLength(0);
+  });
+});
+
+describe('cambio de moneda', () => {
+  const fx = (kind: 'buy' | 'sell', amount: number, base: number, rate: number, currency: 'USD' | 'EUR' = 'USD') =>
+    makeTransaction({
+      type: 'transfer',
+      amount,
+      base_amount: base,
+      currency,
+      exchange_rate: rate,
+      exchange_kind: kind,
+      transaction_date: '2026-09-08',
+    });
+
+  it('no cuenta como gasto ni como ingreso', () => {
+    const scoped = [
+      makeTransaction({ amount: 10000, base_amount: 10000, transaction_date: '2026-09-01' }),
+      fx('buy', 100, 145000, 1450),
+    ];
+    const summary = summarize(scoped, '2026-09-01', '2026-09-30', 'ARS');
+    expect(summary.expense).toBe(10000);
+    expect(summary.income).toBe(0);
+  });
+
+  it('descuenta del saldo los pesos que se fueron y suma los que volvieron', () => {
+    expect(runningBalance([fx('buy', 100, 145000, 1450)])).toBe(-145000);
+    expect(runningBalance([fx('buy', 100, 145000, 1450), fx('sell', 100, 160000, 1600)])).toBe(15000);
+  });
+
+  it('acumula la tenencia y el precio promedio de compra', () => {
+    const [usd] = currencyHoldings([fx('buy', 100, 145000, 1450), fx('buy', 50, 77500, 1550), fx('sell', 30, 48000, 1600)]);
+    expect(usd.currency).toBe('USD');
+    expect(usd.amount).toBe(120);
+    expect(usd.invested).toBe(174500);
+    // 222.500 pesos por los 150 comprados.
+    expect(usd.avg_rate).toBe(1483.33);
+  });
+
+  it('no muestra una moneda que se vendió entera', () => {
+    expect(currencyHoldings([fx('buy', 100, 145000, 1450), fx('sell', 100, 150000, 1500)])).toEqual([]);
+  });
+
+  it('separa las monedas', () => {
+    const rows = [fx('buy', 100, 145000, 1450), fx('buy', 80, 136000, 1700, 'EUR')];
+    expect(currencyHoldings(rows).map((h) => h.currency)).toEqual(['EUR', 'USD']);
+  });
+
+  it('una transferencia común no toca el saldo ni las tenencias', () => {
+    const plain = makeTransaction({ type: 'transfer', amount: 50000, base_amount: 50000, transaction_date: '2026-09-08' });
+    expect(runningBalance([plain])).toBe(0);
+    expect(currencyHoldings([plain])).toEqual([]);
   });
 });

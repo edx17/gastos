@@ -161,7 +161,9 @@ export function mergeIntents(base: ParsedIntent, ai: Awaited<ReturnType<AiProvid
 
   return {
     ...base,
-    type: base.confidence >= 0.7 ? base.type : (ai.type as ParsedIntent['type']),
+    // Un cambio de moneda es una transferencia por definición: si el modelo dice
+    // otra cosa se equivoca, y la base lo rechazaría igual.
+    type: base.exchange_kind ? 'transfer' : base.confidence >= 0.7 ? base.type : (ai.type as ParsedIntent['type']),
     amount,
     currency: base.currency_explicit ? base.currency : ai.currency ?? base.currency,
     date: base.date_explicit ? base.date : ai.date ?? base.date,

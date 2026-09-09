@@ -2,6 +2,7 @@ import * as React from 'react';
 import { CalendarDays, Check, HelpCircle, Pencil, Sparkles, Store, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatMoney, parseAmountInput } from '@/lib/money';
+import { currencyNoun, describeExchange } from '@/services/nlp/exchange';
 import { humanDate, today as todayISO } from '@/lib/date';
 import { useWorkspace } from '@/providers/workspace-provider';
 import type { InterpretResult } from '@/services/ai';
@@ -37,7 +38,7 @@ export function DraftCard({
   onCancel: () => void;
   saving?: boolean;
 }) {
-  const { categories, paymentMethods, household, householdMembers } = useWorkspace();
+  const { categories, paymentMethods, household, householdMembers, rates, profile } = useWorkspace();
   const { intent, suggestion } = draft;
 
   const [editing, setEditing] = React.useState(draft.action === 'ask');
@@ -54,6 +55,8 @@ export function DraftCard({
   const [notes, setNotes] = React.useState('');
   const [askLearn, setAskLearn] = React.useState(false);
   const [shared, setShared] = React.useState(false);
+  // Si no dijeron la cotización, arrancamos con la que tenga configurada.
+  const [rate, setRate] = React.useState(String(intent.exchange_rate ?? rates[intent.currency] ?? ''));
   // Por defecto lo pagó quien está usando la app: es el caso de casi siempre.
   const [paidBy, setPaidBy] = React.useState(
     householdMembers.find((member) => member.user_id)?.id ?? householdMembers[0]?.id ?? '',
@@ -64,24 +67,48 @@ export function DraftCard({
   const subcategory = category?.subcategories.find((s) => s.id === subcategoryId);
   const parsedAmount = parseAmountInput(amount) ?? 0;
   const amountValid = parsedAmount > 0;
-  const canSave = amountValid && description.trim().length > 0;
 
-  const buildInput = (): TransactionInput => ({
-    type,
-    amount: parsedAmount,
-    currency,
-    description: description.trim(),
-    transaction_date: date,
-    category_id: categoryId || null,
-    subcategory_id: subcategoryId || null,
-    merchant_name: intent.merchant,
-    payment_method_id: paymentMethodId || null,
-    notes: notes.trim() || null,
-    source: 'natural_language',
-    ai_confidence: intent.confidence,
-    household_id: shared && household ? household.id : null,
-    paid_by: shared && paidBy ? paidBy : null,
-  });
+  // Un cambio de moneda no se categoriza ni se reparte: es plata que cambia de
+  // bolsillo. La ficha muestra otra cosa y pide otra cosa.
+  const exchangeKind = intent.exchange_kind ?? null;
+  const parsedRate = parseAmountInput(rate) ?? 0;
+  const baseTotal = parsedAmount * parsedRate;
+  const baseCurrency = intent.currency === profile.base_currency ? intent.currency : profile.base_currency;
+
+  const canSave = exchangeKind
+    ? amountValid && parsedRate > 0
+    : amountValid && description.trim().length > 0;
+
+  const buildInput = (): TransactionInput =>
+    exchangeKind
+      ? {
+          type: 'transfer',
+          amount: parsedAmount,
+          currency,
+          description: description.trim(),
+          transaction_date: date,
+          notes: notes.trim() || null,
+          source: 'natural_language',
+          ai_confidence: intent.confidence,
+          exchange_kind: exchangeKind,
+          exchange_rate: parsedRate,
+        }
+      : {
+          type,
+          amount: parsedAmount,
+          currency,
+          description: description.trim(),
+          transaction_date: date,
+          category_id: categoryId || null,
+          subcategory_id: subcategoryId || null,
+          merchant_name: intent.merchant,
+          payment_method_id: paymentMethodId || null,
+          notes: notes.trim() || null,
+          source: 'natural_language',
+          ai_confidence: intent.confidence,
+          household_id: shared && household ? household.id : null,
+          paid_by: shared && paidBy ? paidBy : null,
+        };
 
   const submit = (learn: SaveOptions['learn']) => {
     if (!canSave) return;
@@ -91,7 +118,7 @@ export function DraftCard({
   const handlePrimary = () => {
     if (!canSave) return;
     // A changed category is a teaching moment — ask once, then remember the answer.
-    if (categoryChanged && !askLearn) {
+    if (!exchangeKind && categoryChanged && !askLearn) {
       setAskLearn(true);
       return;
     }
@@ -103,7 +130,7 @@ export function DraftCard({
       <div className="flex items-center justify-between gap-2 border-b border-border bg-accent/40 px-4 py-2.5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Sparkles className="h-4 w-4 text-primary" />
-          {TYPE_LABELS[type]} detectado
+          {exchangeKind ? describeExchange(exchangeKind, currency) : `${TYPE_LABELS[type]} detectado`}
           <span className="text-xs font-normal text-muted-foreground">
             {Math.round(intent.confidence * 100)}% de confianza
           </span>
@@ -148,7 +175,61 @@ export function DraftCard({
         </div>
       ) : null}
 
-      {!editing ? (
+      {exchangeKind ? (
+        <div className="grid gap-4 p-5 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="draft-fx-amount">Cuántos {currencyNoun(currency)}</Label>
+            <Input
+              id="draft-fx-amount"
+              inputMode="decimal"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              placeholder="0"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="draft-fx-rate">Cotización</Label>
+            <Input
+              id="draft-fx-rate"
+              inputMode="decimal"
+              value={rate}
+              onChange={(event) => setRate(event.target.value)}
+              placeholder="0"
+            />
+            {!intent.exchange_rate ? (
+              <p className="text-xs text-muted-foreground">
+                Es la que tenés cargada en Ajustes. Cambiala si compraste a otro precio.
+              </p>
+            ) : null}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="draft-fx-date">Fecha</Label>
+            <Input id="draft-fx-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="draft-fx-notes">Notas</Label>
+            <Input
+              id="draft-fx-notes"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Opcional"
+            />
+          </div>
+          <div className="clay-inset space-y-1 rounded-2xl p-4 sm:col-span-2">
+            <p className="text-sm text-muted-foreground">
+              {exchangeKind === 'buy' ? 'Sale de tus pesos' : 'Entra a tus pesos'}
+            </p>
+            <p className="num text-2xl font-semibold tracking-tight">
+              {parsedRate > 0 && amountValid ? formatMoney(baseTotal, { currency: baseCurrency }) : '—'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {exchangeKind === 'buy'
+                ? `Sumás ${formatMoney(parsedAmount, { currency })} a lo que tenés en ${currencyNoun(currency)}. No cuenta como gasto.`
+                : `Restás ${formatMoney(parsedAmount, { currency })} de lo que tenés en ${currencyNoun(currency)}. No cuenta como ingreso.`}
+            </p>
+          </div>
+        </div>
+      ) : !editing ? (
         <div className="space-y-3 p-5">
           <p className="num text-3xl font-semibold tracking-tight">
             {amountValid ? formatMoney(parsedAmount, { currency }) : 'Importe pendiente'}
@@ -281,7 +362,7 @@ export function DraftCard({
         </div>
       )}
 
-      {household ? (
+      {household && !exchangeKind ? (
         <div className="space-y-3 border-t border-border bg-accent/30 px-5 py-3">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -331,10 +412,14 @@ export function DraftCard({
         </div>
       ) : (
         <div className="flex items-center justify-between gap-2 border-t border-border px-5 py-3">
-          <Button variant="ghost" size="sm" onClick={() => setEditing((value) => !value)}>
-            <Pencil className="h-3.5 w-3.5" />
-            {editing ? 'Ver resumen' : 'Editar'}
-          </Button>
+          {exchangeKind ? (
+            <span />
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setEditing((value) => !value)}>
+              <Pencil className="h-3.5 w-3.5" />
+              {editing ? 'Ver resumen' : 'Editar'}
+            </Button>
+          )}
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={onCancel}>
               Cancelar
@@ -349,7 +434,9 @@ export function DraftCard({
 
       {!canSave && !intent.question ? (
         <p className={cn('px-5 pb-4 text-xs text-muted-foreground')}>
-          Completá el importe y la descripción para poder guardar.
+          {exchangeKind
+            ? 'Completá cuántos comprás y a qué cotización para poder guardar.'
+            : 'Completá el importe y la descripción para poder guardar.'}
         </p>
       ) : null}
     </Card>

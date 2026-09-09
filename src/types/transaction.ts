@@ -5,6 +5,9 @@ export type TransactionType = 'expense' | 'income' | 'transfer' | 'refund' | 'ad
 
 export type TransactionSource = 'manual' | 'natural_language' | 'receipt' | 'import' | 'ai' | 'seed';
 
+/** Compra o venta de moneda extranjera. */
+export type ExchangeKind = 'buy' | 'sell';
+
 export interface Transaction {
   id: UUID;
   user_id: UUID;
@@ -16,6 +19,11 @@ export interface Transaction {
   base_amount: number;
   base_currency: CurrencyCode;
   exchange_rate: number;
+  /**
+   * Marca los cambios de moneda. Comprar dólares no consume plata, la cambia de
+   * moneda, así que el movimiento es una transferencia y esto dice hacia dónde.
+   */
+  exchange_kind?: ExchangeKind | null;
   description: string;
   merchant_id: UUID | null;
   merchant_name?: string | null;
@@ -66,6 +74,7 @@ export interface TransactionInput {
   household_id?: UUID | null;
   paid_by?: UUID | null;
   exchange_rate?: number;
+  exchange_kind?: ExchangeKind | null;
   items?: Omit<TransactionItem, 'id' | 'transaction_id' | 'created_at'>[];
 }
 

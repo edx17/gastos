@@ -22,6 +22,17 @@ export interface ComparisonMetric {
   higher_is_better: boolean;
 }
 
+/** Cuánto hay de una moneda que se compró, y a qué precio se armó. */
+export interface CurrencyHolding {
+  currency: CurrencyCode;
+  /** Lo que queda: comprado menos vendido. */
+  amount: number;
+  /** Lo que salió del bolsillo en la moneda base, neto de ventas. */
+  invested: number;
+  /** Precio promedio de compra, o null si nunca se compró. */
+  avg_rate: number | null;
+}
+
 export interface DashboardSummary {
   period: PeriodSummary;
   previous: PeriodSummary;
@@ -33,6 +44,7 @@ export interface DashboardSummary {
   balance: number;
   top_categories: CategoryBreakdown[];
   recent_days: DailyPoint[];
+  holdings: CurrencyHolding[];
 }
 
 export interface CategoryBreakdown {

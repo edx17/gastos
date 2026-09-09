@@ -22,6 +22,10 @@ export function TransactionRow({
   const category = categories.find((c) => c.id === transaction.category_id);
   const subcategory = category?.subcategories.find((s) => s.id === transaction.subcategory_id);
   const incoming = transaction.type === 'income' || transaction.type === 'refund';
+  // En un cambio de moneda el signo es al revés de lo que parece: comprar
+  // dólares suma dólares y resta pesos.
+  const exchange = transaction.exchange_kind ?? null;
+  const positive = exchange ? exchange === 'buy' : incoming;
 
   return (
     <button
@@ -58,11 +62,16 @@ export function TransactionRow({
       </div>
 
       <div className="shrink-0 text-right">
-        <p className={cn('num text-sm font-semibold', incoming ? 'text-success' : 'text-foreground')}>
-          {incoming ? '+' : '-'}
+        <p className={cn('num text-sm font-semibold', positive ? 'text-success' : 'text-foreground')}>
+          {positive ? '+' : '-'}
           {formatMoney(transaction.amount, { currency: transaction.currency })}
         </p>
-        {transaction.currency !== transaction.base_currency ? (
+        {exchange ? (
+          <p className="text-[11px] text-muted-foreground">
+            {exchange === 'buy' ? '-' : '+'}
+            {formatMoney(transaction.base_amount, { currency: transaction.base_currency })}
+          </p>
+        ) : transaction.currency !== transaction.base_currency ? (
           <p className="text-[11px] text-muted-foreground">
             ≈ {formatMoney(transaction.base_amount, { currency: transaction.base_currency })}
           </p>

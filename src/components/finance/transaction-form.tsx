@@ -52,6 +52,10 @@ export function TransactionForm({
   const [paidBy, setPaidBy] = React.useState(
     initial?.paid_by ?? householdMembers.find((member) => member.user_id)?.id ?? householdMembers[0]?.id ?? '',
   );
+  // Un cambio de moneda no cambia de naturaleza al editarlo: sigue siendo una
+  // transferencia, y lo único que tiene sentido corregir es la cotización.
+  const exchangeKind = initial?.exchange_kind ?? null;
+  const [exchangeRate, setExchangeRate] = React.useState(initial?.exchange_rate ? String(initial.exchange_rate) : '');
 
   const category = categories.find((c) => c.id === categoryId);
   const parsedAmount = parseAmountInput(amount);
@@ -74,7 +78,7 @@ export function TransactionForm({
         event.preventDefault();
         if (!valid) return;
         void onSubmit({
-          type,
+          type: exchangeKind ? 'transfer' : type,
           amount: parsedAmount,
           currency,
           description: description.trim(),
@@ -87,12 +91,19 @@ export function TransactionForm({
           source: initial?.source ?? 'manual',
           household_id: shared && household ? household.id : null,
           paid_by: shared && paidBy ? paidBy : null,
+          exchange_kind: exchangeKind,
+          exchange_rate: exchangeKind ? parseAmountInput(exchangeRate) ?? initial?.exchange_rate : undefined,
         });
       }}
     >
       <div className="space-y-1.5">
         <Label htmlFor="tx-type">Tipo</Label>
-        <Select id="tx-type" value={type} onChange={(event) => setType(event.target.value as TransactionType)}>
+        <Select
+          id="tx-type"
+          value={exchangeKind ? 'transfer' : type}
+          disabled={Boolean(exchangeKind)}
+          onChange={(event) => setType(event.target.value as TransactionType)}
+        >
           {TYPES.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -116,6 +127,22 @@ export function TransactionForm({
           ) : null}
         </div>
       </div>
+
+      {exchangeKind ? (
+        <div className="space-y-1.5">
+          <Label htmlFor="tx-rate">Cotización</Label>
+          <Input
+            id="tx-rate"
+            inputMode="decimal"
+            value={exchangeRate}
+            onChange={(event) => setExchangeRate(event.target.value)}
+            placeholder="0"
+          />
+          <p className="text-xs text-muted-foreground">
+            {exchangeKind === 'buy' ? 'A cuánto compraste.' : 'A cuánto vendiste.'} Define cuántos pesos se movieron.
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-1.5 sm:col-span-2">
         <Label htmlFor="tx-description">Descripción</Label>
@@ -195,7 +222,7 @@ export function TransactionForm({
         </Select>
       </div>
 
-      {household ? (
+      {household && !exchangeKind ? (
         <div className="space-y-3 rounded-md bg-accent/40 p-3 sm:col-span-2">
           <div className="flex items-center justify-between gap-4">
             <div>

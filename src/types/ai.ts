@@ -1,6 +1,6 @@
 import type { ISODate, ISODateTime, UUID } from './common';
 import type { CurrencyCode } from './currency';
-import type { TransactionType } from './transaction';
+import type { ExchangeKind, TransactionType } from './transaction';
 import type { AiProviderId } from './user';
 
 /** What the user is trying to record, before it becomes a transaction. */
@@ -16,6 +16,10 @@ export interface ParsedIntent {
   merchant: string | null;
   payment_method: string | null;
   notes?: string | null;
+  /** Cuando la frase era una compra o venta de moneda extranjera. */
+  exchange_kind?: ExchangeKind | null;
+  /** La cotización, sólo si la persona la dijo. */
+  exchange_rate?: number | null;
   confidence: number;
   /** Fields Crocante could not resolve — the UI asks instead of inventing them. */
   missing: ParsedField[];

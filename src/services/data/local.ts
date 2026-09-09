@@ -28,11 +28,13 @@ import {
   antExpenses,
   categoryBreakdown,
   compare,
+  currencyHoldings,
   dailySeries,
   isSpending,
   merchantRanking,
   monthlySeries,
   paymentMethodBreakdown,
+  runningBalance,
   subcategoryBreakdown,
   summarize,
 } from '@/services/analytics/aggregate';
@@ -484,6 +486,7 @@ export class LocalDataClient implements DataClient {
         // `paid_by` es un integrante del hogar, no una cuenta: dejarlo en el
         // id del usuario apunta a una fila que no existe.
         paid_by: input.paid_by ?? null,
+        exchange_kind: input.exchange_kind ?? null,
         created_by: userId,
         created_at: new Date().toISOString(),
       };
@@ -902,10 +905,7 @@ export class LocalDataClient implements DataClient {
       (t) => t.transaction_date >= previous.from && t.transaction_date <= previous.to,
     );
 
-    const balance = db.transactions.reduce(
-      (acc, t) => acc + (t.type === 'income' || t.type === 'refund' ? t.base_amount : t.type === 'expense' ? -t.base_amount : 0),
-      0,
-    );
+    const balance = runningBalance(db.transactions);
 
     return {
       period: current,
@@ -915,7 +915,8 @@ export class LocalDataClient implements DataClient {
         expense: compare(current.expense, before.expense, false),
         savings: compare(current.savings, before.savings, true),
       },
-      balance: round(balance, 2),
+      balance,
+      holdings: currencyHoldings(db.transactions),
       top_categories: categoryBreakdown(currentRows, categories, { previous: previousRows }).slice(0, 6),
       recent_days: dailySeries(currentRows, range.from, range.to),
     };

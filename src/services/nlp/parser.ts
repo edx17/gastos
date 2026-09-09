@@ -7,6 +7,7 @@ import type { TransactionType } from '@/types/transaction';
 import { findDate } from './dates';
 import { findAmountCandidates, findWordAmount, pickBestAmount, type AmountCandidate } from './numbers';
 import { findMerchant } from './brands';
+import { describeExchange, findExchange, type ExchangeMatch } from './exchange';
 
 export interface ParseContext {
   today?: Date;
@@ -83,10 +84,22 @@ export function parseIntent(input: string, ctx: ParseContext = {}): ParsedIntent
     ? `${normalized.slice(0, dateMatch.start)} ${normalized.slice(dateMatch.end)}`
     : normalized;
 
-  // 3. Merchant
+  // 3. ¿Es un cambio de moneda? Se resuelve antes que nada porque «compré 100
+  // dólares» no tiene comercio, ni categoría, ni nada más que interpretar.
+  const exchange = findExchange(withoutDate, baseCurrency);
+  if (exchange) {
+    return exchangeIntent(exchange, {
+      raw,
+      baseCurrency,
+      date: dateMatch?.date ?? format(today, 'yyyy-MM-dd'),
+      dateExplicit: Boolean(dateMatch),
+    });
+  }
+
+  // 4. Merchant
   const merchantMatch = findMerchant(withoutDate);
 
-  // 4. Amount
+  // 5. Amount
   const digitCandidates = findAmountCandidates(withoutDate).filter(
     (c) => !merchantMatch || c.end <= merchantMatch.start || c.start >= merchantMatch.end,
   );
@@ -98,14 +111,14 @@ export function parseIntent(input: string, ctx: ParseContext = {}): ParsedIntent
     !digitCandidates.some((c) => c.hadSymbol || c.hadMultiplier || c.hadCurrencyWord) &&
     Math.max(...distinctValues) / Math.min(...distinctValues.filter((v) => v > 0)) < 5;
 
-  // 5. Type
+  // 6. Type
   const type = detectType(normalized);
   const typeExplicit = TYPE_PATTERNS.some((p) => p.re.test(normalized));
 
-  // 6. Payment method
+  // 7. Payment method
   const paymentMethod = PAYMENT_PATTERNS.find((p) => p.re.test(normalized))?.label ?? null;
 
-  // 7. Description — what's left once the machine-readable bits are removed.
+  // 8. Description — what's left once the machine-readable bits are removed.
   const description =
     buildDescription(withoutDate, best, merchantMatch?.alias ?? null, merchantMatch?.name ?? null) ||
     verbMeaning(normalized);
@@ -157,6 +170,35 @@ function normalizeForParsing(value: string): string {
     .replace(/[^\w\s$.,/-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Un cambio de moneda ya viene resuelto: importe, moneda y para qué lado. Lo
+ * único que puede faltar es la cotización, y esa la pone la app con la que
+ * tenga configurada.
+ */
+function exchangeIntent(
+  exchange: ExchangeMatch,
+  ctx: { raw: string; baseCurrency: CurrencyCode; date: string; dateExplicit: boolean },
+): ParsedIntent {
+  return {
+    type: 'transfer',
+    amount: exchange.amount,
+    currency: exchange.currency,
+    currency_explicit: true,
+    date: ctx.date,
+    date_explicit: ctx.dateExplicit,
+    description: describeExchange(exchange.kind, exchange.currency),
+    merchant: null,
+    payment_method: null,
+    exchange_kind: exchange.kind,
+    exchange_rate: exchange.rate,
+    // No queda nada por adivinar; con la cotización dicha, menos todavía.
+    confidence: exchange.rate ? 0.95 : 0.9,
+    missing: [],
+    raw_input: ctx.raw,
+    engine: 'rules',
+  };
 }
 
 function emptyIntent(raw: string, currency: CurrencyCode, today: Date): ParsedIntent {

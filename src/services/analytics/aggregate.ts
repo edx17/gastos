@@ -3,9 +3,11 @@ import { round } from '@/lib/utils';
 import type { ISODate } from '@/types/common';
 import type { CategoryTree } from '@/types/category';
 import type { Transaction } from '@/types/transaction';
+import type { CurrencyCode } from '@/types/currency';
 import type {
   AntExpenseReport,
   CategoryBreakdown,
+  CurrencyHolding,
   ComparisonMetric,
   DailyPoint,
   MerchantRanking,
@@ -16,8 +18,61 @@ import type {
 
 /** Money that leaves the account. Transfers move value, they don't consume it. */
 export const isSpending = (t: Transaction) => t.type === 'expense';
+/** Compra o venta de moneda extranjera: cambia de bolsillo, no se gasta. */
+export const isExchange = (t: Transaction) => Boolean(t.exchange_kind);
 /** Money that comes in. Refunds reduce spending, so they count as income here. */
 export const isEarning = (t: Transaction) => t.type === 'income' || t.type === 'refund';
+
+/**
+ * Lo que queda disponible en la moneda base.
+ *
+ * Comprar moneda extranjera descuenta los pesos que salieron y venderla los
+ * suma; el resto de las transferencias mueven plata de un bolsillo propio a
+ * otro y no cambian el total.
+ */
+export function runningBalance(rows: Transaction[]): number {
+  return round(
+    rows.reduce((acc, t) => {
+      if (isEarning(t)) return acc + t.base_amount;
+      if (isSpending(t)) return acc - t.base_amount;
+      if (t.exchange_kind === 'buy') return acc - t.base_amount;
+      if (t.exchange_kind === 'sell') return acc + t.base_amount;
+      return acc;
+    }, 0),
+    2,
+  );
+}
+
+/**
+ * Cuánto tiene de cada moneda que compró, cuánto le costó juntarlo y a qué
+ * precio promedio lo compró. Las monedas que quedaron en cero no se muestran.
+ */
+export function currencyHoldings(rows: Transaction[]): CurrencyHolding[] {
+  const buckets = new Map<CurrencyCode, { amount: number; invested: number; bought: number; boughtBase: number }>();
+
+  for (const row of rows) {
+    if (!row.exchange_kind) continue;
+    const bucket = buckets.get(row.currency) ?? { amount: 0, invested: 0, bought: 0, boughtBase: 0 };
+    const sign = row.exchange_kind === 'buy' ? 1 : -1;
+    bucket.amount += sign * row.amount;
+    bucket.invested += sign * row.base_amount;
+    if (row.exchange_kind === 'buy') {
+      bucket.bought += row.amount;
+      bucket.boughtBase += row.base_amount;
+    }
+    buckets.set(row.currency, bucket);
+  }
+
+  return [...buckets.entries()]
+    .map(([currency, bucket]) => ({
+      currency,
+      amount: round(bucket.amount, 2),
+      invested: round(bucket.invested, 2),
+      avg_rate: bucket.bought > 0 ? round(bucket.boughtBase / bucket.bought, 2) : null,
+    }))
+    .filter((holding) => holding.amount !== 0)
+    .sort((a, b) => a.currency.localeCompare(b.currency));
+}
 
 export function inRange(t: Transaction, from: ISODate, to: ISODate): boolean {
   return t.transaction_date >= from && t.transaction_date <= to;

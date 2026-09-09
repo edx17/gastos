@@ -252,4 +252,74 @@ begin
   raise notice 'OK · RLS: Ana ve % movimientos propios', visible;
 end $$;
 
+-- Compra y venta de moneda extranjera: los pesos salen del saldo, los dólares
+-- se acumulan como tenencia.
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  before numeric;
+  after numeric;
+  holding record;
+  found_usd boolean := false;
+begin
+  select public.account_balance() into before;
+
+  -- Compra 100 a 1450 y otra de 50 a 1550: 200.000 pesos por 150 dólares.
+  insert into public.transactions (user_id, type, amount, currency, base_amount, base_currency,
+    exchange_rate, exchange_kind, description, transaction_date, source)
+  values
+    (ana, 'transfer', 100, 'USD', 145000, 'ARS', 1450, 'buy', 'Compra de dólares', current_date, 'manual'),
+    (ana, 'transfer', 50, 'USD', 77500, 'ARS', 1550, 'buy', 'Compra de dólares', current_date, 'manual'),
+    (ana, 'transfer', 30, 'USD', 48000, 'ARS', 1600, 'sell', 'Venta de dólares', current_date, 'manual');
+
+  select public.account_balance() into after;
+  -- Salieron 145000 + 77500 y volvieron 48000.
+  assert after - before = -174500, format('El saldo debería bajar 174500, cambió %s', after - before);
+
+  for holding in select * from public.currency_holdings() loop
+    if holding.currency = 'USD' then
+      found_usd := true;
+      assert holding.amount = 120, format('Deberían quedar 120 dólares, hay %s', holding.amount);
+      assert holding.invested = 174500, format('Puso 174500, dice %s', holding.invested);
+      -- 222500 pesos por 150 dólares comprados.
+      assert holding.avg_rate = 1483.33, format('El promedio de compra debería ser 1483.33, es %s', holding.avg_rate);
+    end if;
+  end loop;
+  assert found_usd, 'La tenencia en dólares no apareció';
+
+  raise notice 'OK · cambio: 120 dólares en cartera, saldo en pesos descontado';
+end $$;
+
+-- Un cambio de moneda no es ni gasto ni ingreso: no puede ensuciar el resumen.
+do $$
+declare
+  spent numeric;
+begin
+  select expense into spent from public.report_summary(current_date - 1, current_date + 1);
+  assert spent is not null, 'El resumen no devolvió gastos';
+  assert not exists (
+    select 1 from public.transactions
+    where exchange_kind is not null and type <> 'transfer'
+  ), 'Un cambio de moneda quedó guardado con un tipo que no es transferencia';
+  raise notice 'OK · cambio: las compras de dólares no cuentan como gasto';
+end $$;
+
+-- La restricción no deja marcar como cambio algo que no es transferencia.
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+begin
+  begin
+    insert into public.transactions (user_id, type, amount, currency, base_amount, base_currency,
+      exchange_kind, description, transaction_date, source)
+    values (ana, 'expense', 100, 'USD', 145000, 'ARS', 'buy', 'Mal cargado', current_date, 'manual');
+    raise exception 'Se pudo guardar un gasto marcado como cambio de moneda';
+  exception
+    when check_violation then
+      raise notice 'OK · cambio: un gasto no puede marcarse como compra de moneda';
+  end;
+end $$;
+
 reset role;
