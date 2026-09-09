@@ -15,7 +15,6 @@ import type { AiProviderId } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input, Label, Select, Switch } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { CurrencySelector } from '@/components/finance/currency-selector';
 import { cancelSubscription, deleteAccount } from '@/services/billing/account';
@@ -49,6 +48,7 @@ export default function SettingsPage() {
   const traces = useAsync(() => client.listAiInteractions(userId, 10), [userId, revision]);
 
   const [displayName, setDisplayName] = React.useState(profile.display_name);
+  const accounts = useAsync(() => client.listAccounts(userId), [userId, revision]);
   const [newMethod, setNewMethod] = React.useState('');
   const [resetting, setResetting] = React.useState(false);
   const [cancelling, setCancelling] = React.useState(false);
@@ -331,14 +331,43 @@ export default function SettingsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-1.5">
+          {/* De qué cuenta sale cada uno: se linkea una vez y después los
+              movimientos descuentan solos, sin elegir cuenta al cargar. */}
+          <div className="space-y-2">
             {paymentMethods.map((method) => (
-              <Badge key={method.id} variant="secondary">
-                {method.name}
-                {method.last4 ? ` ····${method.last4}` : ''}
-              </Badge>
+              <div key={method.id} className="flex flex-wrap items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {method.name}
+                  {method.last4 ? <span className="text-muted-foreground"> ····{method.last4}</span> : null}
+                  {method.kind === 'credit' ? (
+                    <span className="text-xs text-muted-foreground"> · crédito</span>
+                  ) : null}
+                </span>
+                <Select
+                  className="w-full sm:w-56"
+                  value={method.account_id ?? ''}
+                  aria-label={`Cuenta de ${method.name}`}
+                  onChange={async (event) => {
+                    await client.updatePaymentMethod(method.id, { account_id: event.target.value || null });
+                    await refreshPaymentMethods();
+                    bumpRevision();
+                  }}
+                >
+                  <option value="">{method.kind === 'credit' ? 'Se paga desde…' : 'Sin cuenta'}</option>
+                  {(accounts.data ?? []).map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             ))}
           </div>
+
+          <p className="text-xs text-muted-foreground">
+            Al pagar con uno de estos se descuenta de su cuenta, sin que tengas que elegirla. Una tarjeta de crédito
+            es la excepción: el consumo no descuenta nada hasta que pagás el resumen.
+          </p>
 
           <div className="space-y-1.5">
             <Label htmlFor="default-payment">El que usás casi siempre</Label>

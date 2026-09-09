@@ -626,4 +626,134 @@ begin
   raise notice 'OK · ajustes: el medio de pago por defecto se guarda y se limpia solo';
 end $$;
 
+-- Cada medio de pago sale de una cuenta, y los movimientos corren el saldo
+-- desde el día en que se declaró.
+reset role;
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  caja uuid;
+  usd uuid;
+  debito uuid;
+  tarjeta uuid;
+  fila record;
+  visto boolean := false;
+begin
+  insert into public.accounts (user_id, name, currency, kind, balance)
+  values (ana, 'Caja Galicia', 'ARS', 'savings', 1000000) returning id into caja;
+
+  insert into public.accounts (user_id, name, currency, kind, balance)
+  values (ana, 'Dólares Galicia', 'USD', 'savings', 500) returning id into usd;
+
+  -- El saldo se declaró hace una semana: lo que corre son los movimientos
+  -- posteriores a ese día.
+  update public.accounts set balance_updated_at = current_date - 7 where id in (caja, usd);
+
+  insert into public.payment_methods (user_id, name, kind, account_id)
+  values (ana, 'Débito Galicia test', 'debit', caja) returning id into debito;
+
+  insert into public.payment_methods (user_id, name, kind, account_id)
+  values (ana, 'Visa Galicia test', 'credit', caja) returning id into tarjeta;
+
+  -- Un gasto con débito descuenta; el mismo importe con crédito no.
+  insert into public.transactions (user_id, type, amount, base_amount, description,
+    transaction_date, source, payment_method_id)
+  values
+    (ana, 'expense', 30000, 30000, 'Super', current_date, 'manual', debito),
+    (ana, 'expense', 90000, 90000, 'Zapatillas', current_date, 'manual', tarjeta),
+    (ana, 'income', 50000, 50000, 'Changa', current_date, 'manual', debito);
+
+  -- Y una cuota que vence el mes que viene todavía no salió de la cuenta.
+  insert into public.transactions (user_id, type, amount, base_amount, description,
+    transaction_date, source, payment_method_id, installment_id, installment_number, installment_count)
+  values (ana, 'expense', 10000, 10000, 'Futuro', current_date + 30, 'manual', debito,
+    gen_random_uuid(), 2, 6);
+
+  for fila in select * from public.account_movement_deltas() loop
+    if fila.account_id = caja then
+      visto := true;
+      -- -30000 + 50000. La compra con crédito y la cuota futura no entran.
+      assert fila.delta = 20000, format('La caja debería moverse 20000, se movió %s', fila.delta);
+      assert fila.movements = 2, format('Deberían contarse 2 movimientos, se contaron %s', fila.movements);
+    end if;
+  end loop;
+  assert visto, 'La cuenta no apareció en los movimientos';
+
+  -- Redeclarar el saldo corre el ancla a hoy: lo de antes deja de contarse.
+  update public.accounts set balance = 1020000 where id = caja;
+  for fila in select * from public.account_movement_deltas() loop
+    if fila.account_id = caja then
+      assert fila.delta = 0, format('Después de redeclarar el saldo el desvío debería ser 0, es %s', fila.delta);
+    end if;
+  end loop;
+
+  -- Una cuenta en dólares toma el importe en su moneda, no el convertido.
+  insert into public.payment_methods (user_id, name, kind, account_id)
+  values (ana, 'Transferencia USD test', 'transfer', usd);
+
+  insert into public.transactions (user_id, type, amount, currency, base_amount, base_currency,
+    exchange_rate, description, transaction_date, source, payment_method_id)
+  values (ana, 'expense', 100, 'USD', 150000, 'ARS', 1500, 'Compra en dólares', current_date, 'manual',
+    (select id from public.payment_methods where user_id = ana and name = 'Transferencia USD test'));
+
+  for fila in select * from public.account_movement_deltas() loop
+    if fila.account_id = usd then
+      assert fila.delta = -100, format('La cuenta en dólares debería moverse -100, se movió %s', fila.delta);
+    end if;
+  end loop;
+
+  -- Del día en que se declaró el saldo entra sólo lo cargado después.
+  update public.accounts set balance = 999, balance_updated_at = current_date,
+    balance_declared_at = now() where id = usd;
+
+  insert into public.transactions (user_id, type, amount, currency, base_amount, base_currency,
+    exchange_rate, description, transaction_date, source, payment_method_id, created_at)
+  values (ana, 'expense', 7, 'USD', 10500, 'ARS', 1500, 'Anterior a declarar', current_date, 'manual',
+    (select id from public.payment_methods where user_id = ana and name = 'Transferencia USD test'),
+    now() - interval '1 hour');
+
+  for fila in select * from public.account_movement_deltas() loop
+    if fila.account_id = usd then
+      assert fila.delta = 0,
+        format('Un gasto cargado antes de declarar el saldo no debería contar, contó %s', fila.delta);
+    end if;
+  end loop;
+
+  insert into public.transactions (user_id, type, amount, currency, base_amount, base_currency,
+    exchange_rate, description, transaction_date, source, payment_method_id, created_at)
+  values (ana, 'expense', 3, 'USD', 4500, 'ARS', 1500, 'Después de declarar', current_date, 'manual',
+    (select id from public.payment_methods where user_id = ana and name = 'Transferencia USD test'),
+    now() + interval '1 minute');
+
+  for fila in select * from public.account_movement_deltas() loop
+    if fila.account_id = usd then
+      assert fila.delta = -3, format('El gasto posterior debería contar -3, contó %s', fila.delta);
+    end if;
+  end loop;
+
+  raise notice 'OK · cuentas: el medio de pago descuenta de su cuenta y la tarjeta no';
+end $$;
+
+-- Borrar una cuenta no puede romper el medio de pago que la usaba.
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  medio uuid;
+  cuenta uuid;
+  apunta uuid;
+begin
+  select id into medio from public.payment_methods where user_id = ana and name = 'Débito Galicia test';
+  select account_id into cuenta from public.payment_methods where id = medio;
+
+  delete from public.accounts where id = cuenta;
+
+  select account_id into apunta from public.payment_methods where id = medio;
+  assert apunta is null, 'El medio de pago quedó apuntando a una cuenta borrada';
+  assert exists (select 1 from public.payment_methods where id = medio), 'Se borró el medio de pago con la cuenta';
+
+  raise notice 'OK · cuentas: borrar una cuenta deja el medio de pago sin vínculo, no lo borra';
+end $$;
+
 reset role;

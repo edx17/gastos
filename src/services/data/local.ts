@@ -18,6 +18,7 @@ import type { DailyPoint, DashboardSummary, MonthlyPoint, RecurringExpense, Repo
 import type {
   Account,
   AccountBalancePoint,
+  AccountDelta,
   AccountInput,
   Merchant,
   PaymentMethod,
@@ -42,6 +43,7 @@ import {
   subcategoryBreakdown,
   summarize,
 } from '@/services/analytics/aggregate';
+import { accountDeltas } from '@/services/analytics/account-deltas';
 import { detectRecurring } from '@/services/analytics/recurring';
 import { buildCategories, buildDemoDataset } from '@/services/seed/demo';
 import type { DataClient, DateRangeInput } from './types';
@@ -635,6 +637,7 @@ export class LocalDataClient implements DataClient {
       kind: input.kind,
       balance: round(input.balance, 2),
       balance_updated_at: today(),
+      balance_declared_at: new Date().toISOString(),
       institution: input.institution?.trim() || null,
       notes: input.notes?.trim() || null,
       sort_order: db.accounts.length,
@@ -665,6 +668,7 @@ export class LocalDataClient implements DataClient {
     // Sólo cambiar el número mueve la fecha y deja un punto en el historial.
     if (changedBalance) {
       account.balance_updated_at = today();
+      account.balance_declared_at = new Date().toISOString();
       this.recordBalance(db, account);
     }
     this.writeDb(userId, db);
@@ -684,6 +688,11 @@ export class LocalDataClient implements DataClient {
     return db.accountBalances
       .filter((point) => point.account_id === accountId)
       .sort((a, b) => b.recorded_on.localeCompare(a.recorded_on));
+  }
+
+  async listAccountDeltas(userId: UUID): Promise<AccountDelta[]> {
+    const db = this.db(userId);
+    return accountDeltas(await this.listAccounts(userId), db.payment_methods, db.transactions, today());
   }
 
   async getNetWorth(userId: UUID): Promise<number> {

@@ -155,7 +155,8 @@ export function buildDemoDataset(userId: string, reference = new Date()): DemoDa
     currency,
     kind,
     balance,
-    balance_updated_at: format(reference, 'yyyy-MM-dd'),
+    balance_updated_at: format(addDays(reference, -3), 'yyyy-MM-dd'),
+    balance_declared_at: addDays(reference, -3).toISOString(),
     institution,
     notes: null,
     sort_order: sort,
@@ -167,9 +168,21 @@ export function buildDemoDataset(userId: string, reference = new Date()): DemoDa
   const accounts: Account[] = [
     account('Caja de ahorro $', 'ARS', 'savings', 1_240_000, 'Galicia', 0),
     account('FIMA Premium', 'ARS', 'investment', 2_600_000, 'Galicia', 1),
-    account('Reservas', 'ARS', 'wallet', 380_000, 'Mercado Pago', 2),
+    account('Reservas', 'ARS', 'wallet', 940_000, 'Mercado Pago', 2),
     account('Dólares', 'USD', 'cash', 1_200, 'En casa', 3),
   ];
+
+  // De qué cuenta sale cada medio de pago, para que la demo muestre el vínculo.
+  const [caja, , reservas] = accounts;
+  const linkTo: Record<string, string> = {
+    'Débito Galicia': caja.id,
+    'Visa Crédito': caja.id,
+    Transferencia: caja.id,
+    'Mercado Pago': reservas.id,
+  };
+  for (const method of paymentMethods) {
+    method.account_id = linkTo[method.name] ?? null;
+  }
 
   const merchantNames = new Set<string>();
   PATTERNS.forEach((p) => p.merchants.forEach((m) => merchantNames.add(m)));

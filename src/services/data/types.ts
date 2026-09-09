@@ -16,6 +16,7 @@ import type {
 import type {
   Account,
   AccountBalancePoint,
+  AccountDelta,
   AccountInput,
   Merchant,
   PaymentMethod,
@@ -96,6 +97,8 @@ export interface DataClient {
   listAccountBalances(accountId: UUID): Promise<AccountBalancePoint[]>;
   /** El total de todas las cuentas, pasado a la moneda base. */
   getNetWorth(userId: UUID): Promise<number>;
+  /** Cuánto se movió cada cuenta desde que se declaró su saldo. */
+  listAccountDeltas(userId: UUID): Promise<AccountDelta[]>;
   listMerchants(userId: UUID): Promise<Merchant[]>;
 
   // Receipts

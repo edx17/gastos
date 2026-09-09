@@ -114,6 +114,13 @@ export interface PaymentMethod {
   id: UUID;
   user_id: UUID;
   name: string;
+  /**
+   * De qué cuenta sale la plata al pagar con esto.
+   *
+   * Las tarjetas de crédito no descuentan al comprar: el consumo se paga en el
+   * resumen, y ese pago sale de la cuenta desde la que se transfiere.
+   */
+  account_id?: UUID | null;
   kind: 'cash' | 'debit' | 'credit' | 'transfer' | 'wallet' | 'other';
   issuer?: string | null;
   /** Last 4 digits at most — full card numbers are never stored. */
@@ -141,6 +148,8 @@ export interface Account {
   balance: number;
   /** Cuándo se actualizó el saldo por última vez. */
   balance_updated_at?: ISODate | null;
+  /** El momento exacto, para distinguir lo que se cargó ese mismo día después. */
+  balance_declared_at?: ISODateTime | null;
   /** El banco o la billetera: Galicia, Mercado Pago, Belo. */
   institution?: string | null;
   notes?: string | null;
@@ -159,6 +168,13 @@ export interface AccountInput {
   institution?: string | null;
   notes?: string | null;
   include_in_net_worth?: boolean;
+}
+
+/** Cuánto se movió una cuenta desde el día en que se declaró su saldo. */
+export interface AccountDelta {
+  account_id: UUID;
+  delta: number;
+  movements: number;
 }
 
 /** Un saldo declarado en una fecha, para ver la evolución. */

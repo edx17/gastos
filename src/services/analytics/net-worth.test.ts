@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { netWorth } from './net-worth';
+import { estimatedBalance, netWorth } from './net-worth';
 import type { Account } from '@/types/transaction';
 
 const account = (partial: Partial<Account>): Account => ({
@@ -52,5 +52,29 @@ describe('patrimonio', () => {
 
   it('sin cuentas da cero, no NaN', () => {
     expect(netWorth([], rates)).toBe(0);
+  });
+});
+
+describe('saldo estimado', () => {
+  it('sin movimientos linkeados es el declarado', () => {
+    const cuenta = account({ id: 'a1', balance: 1_000_000 });
+    expect(estimatedBalance(cuenta, undefined)).toBe(1_000_000);
+    expect(netWorth([cuenta], rates)).toBe(1_000_000);
+  });
+
+  it('suma lo que se movió desde que se declaró', () => {
+    const cuenta = account({ id: 'a1', balance: 1_000_000 });
+    expect(estimatedBalance(cuenta, -130_000)).toBe(870_000);
+    expect(netWorth([cuenta], rates, [{ account_id: 'a1', delta: -130_000, movements: 4 }])).toBe(870_000);
+  });
+
+  it('el desvío de una cuenta en dólares se convierte una sola vez', () => {
+    const cuenta = account({ id: 'a1', balance: 1_000, currency: 'USD' });
+    expect(netWorth([cuenta], rates, [{ account_id: 'a1', delta: -100, movements: 1 }])).toBe(1_350_000);
+  });
+
+  it('un desvío de una cuenta que no suma al total no mueve el patrimonio', () => {
+    const cuenta = account({ id: 'a1', balance: 500_000, include_in_net_worth: false });
+    expect(netWorth([cuenta], rates, [{ account_id: 'a1', delta: -100_000, movements: 2 }])).toBe(0);
   });
 });

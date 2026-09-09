@@ -30,6 +30,7 @@ import type {
 import type {
   Account,
   AccountBalancePoint,
+  AccountDelta,
   AccountInput,
   Merchant,
   PaymentMethod,
@@ -578,6 +579,17 @@ export class SupabaseDataClient implements DataClient {
       .limit(180);
     if (error) throw dbError(error);
     return (data ?? []) as AccountBalancePoint[];
+  }
+
+  async listAccountDeltas(): Promise<AccountDelta[]> {
+    // La suma se hace en la base: viaja una fila por cuenta, no el historial.
+    const { data, error } = await this.db.rpc('account_movement_deltas');
+    if (error) throw dbError(error);
+    return ((data ?? []) as AccountDelta[]).map((row) => ({
+      account_id: row.account_id,
+      delta: Number(row.delta),
+      movements: Number(row.movements),
+    }));
   }
 
   async getNetWorth(): Promise<number> {

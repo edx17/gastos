@@ -31,6 +31,7 @@ export default function DashboardPage() {
 
   const dashboard = useAsync(() => client.getDashboard(userId, range), [userId, range.from, range.to, revision]);
   const accounts = useAsync(() => client.listAccounts(userId), [userId, revision]);
+  const accountDeltas = useAsync(() => client.listAccountDeltas(userId), [userId, revision]);
   const budgets = useAsync(() => client.getBudgetProgress(userId), [userId, revision]);
   const recurring = useAsync(() => client.listRecurring(userId), [userId, revision]);
 
@@ -109,7 +110,12 @@ export default function DashboardPage() {
           {/* Lo que hay hoy, que es distinto del ahorro del mes. Va arriba de
               todo porque es la pregunta con la que uno abre la app, y porque
               sin esto los números del mes parecen decir que no tenés nada. */}
-          <NetWorthCard accounts={accounts.data ?? []} rates={rates} baseCurrency={currency} />
+          <NetWorthCard
+            accounts={accounts.data ?? []}
+            deltas={accountDeltas.data ?? []}
+            rates={rates}
+            baseCurrency={currency}
+          />
 
           {accounts.data?.length ? (
             <p className="text-xs text-muted-foreground">

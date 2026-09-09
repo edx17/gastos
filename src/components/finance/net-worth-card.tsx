@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, Landmark } from 'lucide-react';
 import { formatMoney } from '@/lib/money';
-import { netWorth } from '@/services/analytics/net-worth';
+import { estimatedBalance, netWorth } from '@/services/analytics/net-worth';
 import type { CurrencyCode } from '@/types/currency';
-import type { Account } from '@/types/transaction';
+import type { Account, AccountDelta } from '@/types/transaction';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonVariants } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -17,10 +17,13 @@ import { EmptyState } from '@/components/ui/empty-state';
  */
 export function NetWorthCard({
   accounts,
+  deltas = [],
   rates,
   baseCurrency,
 }: {
   accounts: Account[];
+  /** Lo que se movió en cada cuenta desde que se declaró su saldo. */
+  deltas?: AccountDelta[];
   rates: Record<string, number>;
   baseCurrency: CurrencyCode;
 }) {
@@ -43,10 +46,13 @@ export function NetWorthCard({
     );
   }
 
-  const total = netWorth(accounts, rates);
+  const total = netWorth(accounts, rates, deltas);
+  const drift = new Map(deltas.map((row) => [row.account_id, row.delta]));
+  const saldo = (account: Account) => estimatedBalance(account, drift.get(account.id));
+
   const visible = [...accounts]
     .filter((account) => account.include_in_net_worth)
-    .sort((a, b) => Math.abs(b.balance * (rates[b.currency] ?? 1)) - Math.abs(a.balance * (rates[a.currency] ?? 1)))
+    .sort((a, b) => Math.abs(saldo(b) * (rates[b.currency] ?? 1)) - Math.abs(saldo(a) * (rates[a.currency] ?? 1)))
     .slice(0, 5);
 
   return (
@@ -73,7 +79,7 @@ export function NetWorthCard({
                 {account.name}
                 {account.institution ? <span className="text-xs"> · {account.institution}</span> : null}
               </span>
-              <span className="num shrink-0">{formatMoney(account.balance, { currency: account.currency })}</span>
+              <span className="num shrink-0">{formatMoney(saldo(account), { currency: account.currency })}</span>
             </div>
           ))}
         </div>

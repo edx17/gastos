@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Landmark, Pencil, Plus, Trash2 } from 'lucide-react';
 import { formatMoney } from '@/lib/money';
 import { round } from '@/lib/utils';
-import { netWorth } from '@/services/analytics/net-worth';
+import { estimatedBalance, netWorth } from '@/services/analytics/net-worth';
 import { formatDateFull, today as todayISO } from '@/lib/date';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { useAsync } from '@/hooks/use-async';
@@ -53,6 +53,7 @@ export default function AccountsPage() {
   const base = profile.base_currency;
 
   const accounts = useAsync(() => client.listAccounts(userId), [userId, revision]);
+  const deltas = useAsync(() => client.listAccountDeltas(userId), [userId, revision]);
 
   const [editing, setEditing] = React.useState<Account | null>(null);
   const [creating, setCreating] = React.useState(false);
@@ -76,7 +77,11 @@ export default function AccountsPage() {
   }, [categories]);
 
   const rows = accounts.data ?? [];
-  const total = netWorth(rows, rates);
+  const drift = React.useMemo(
+    () => new Map((deltas.data ?? []).map((row) => [row.account_id, row])),
+    [deltas.data],
+  );
+  const total = netWorth(rows, rates, deltas.data ?? []);
   const excluded = rows.filter((account) => !account.include_in_net_worth).length;
 
   const openNew = () => {
@@ -87,7 +92,7 @@ export default function AccountsPage() {
     setCreating(true);
   };
 
-  const openEdit = (account: Account) => {
+  const openEdit = (account: Account, suggested?: number) => {
     setDraft({
       name: account.name,
       currency: account.currency,
@@ -97,7 +102,7 @@ export default function AccountsPage() {
       notes: account.notes ?? '',
       include_in_net_worth: account.include_in_net_worth,
     });
-    setAmount(String(account.balance));
+    setAmount(String(suggested ?? account.balance));
     setAsYield(false);
     setEditing(account);
     setCreating(true);
@@ -140,7 +145,7 @@ export default function AccountsPage() {
       setCreating(false);
       setEditing(null);
       bumpRevision();
-      await accounts.reload();
+      await Promise.all([accounts.reload(), deltas.reload()]);
     } catch (error) {
       toast.error('No pude guardar', error instanceof Error ? error.message : undefined);
     } finally {
@@ -206,14 +211,44 @@ export default function AccountsPage() {
                   </div>
 
                   <p className="num text-2xl font-semibold tracking-tight">
-                    {formatMoney(account.balance, { currency: account.currency })}
+                    {formatMoney(estimatedBalance(account, drift.get(account.id)?.delta), {
+                      currency: account.currency,
+                    })}
                   </p>
+
+                  {drift.get(account.id)?.movements ? (
+                    <button
+                      type="button"
+                      onClick={() => openEdit(account, estimatedBalance(account, drift.get(account.id)?.delta))}
+                      className="clay-inset w-full space-y-0.5 rounded-2xl px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <span className="block">
+                        Declaraste {formatMoney(account.balance, { currency: account.currency })}
+                        {account.balance_updated_at ? ` el ${formatDateFull(account.balance_updated_at)}` : ''}.
+                      </span>
+                      <span className="block">
+                        Desde entonces {drift.get(account.id)!.movements}{' '}
+                        {drift.get(account.id)!.movements === 1 ? 'movimiento' : 'movimientos'} por{' '}
+                        <strong className="num">
+                          {formatMoney(drift.get(account.id)!.delta, { currency: account.currency })}
+                        </strong>
+                        .
+                      </span>
+                      <span className="block text-primary">Tocá para confirmar el saldo real.</span>
+                    </button>
+                  ) : null}
 
                   <div className="space-y-0.5 text-xs text-muted-foreground">
                     {account.currency !== base ? (
-                      <p>≈ {formatMoney(account.balance * (rates[account.currency] ?? 1), { currency: base })}</p>
+                      <p>
+                        ≈{' '}
+                        {formatMoney(
+                          estimatedBalance(account, drift.get(account.id)?.delta) * (rates[account.currency] ?? 1),
+                          { currency: base },
+                        )}
+                      </p>
                     ) : null}
-                    {account.balance_updated_at ? (
+                    {account.balance_updated_at && !drift.get(account.id)?.movements ? (
                       <p>Saldo al {formatDateFull(account.balance_updated_at)}</p>
                     ) : null}
                     {!account.include_in_net_worth ? <p>No suma al total.</p> : null}
