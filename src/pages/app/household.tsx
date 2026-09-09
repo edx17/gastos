@@ -137,7 +137,7 @@ export default function HouseholdPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{household.name}</h1>
           <p className="text-sm text-muted-foreground">
             {sharedRows.length
-              ? `${sharedRows.length} gastos compartidos en ${range.label}`
+              ? `${sharedRows.length} ${sharedRows.length === 1 ? 'gasto compartido' : 'gastos compartidos'} en ${range.label}`
               : `Sin gastos compartidos en ${range.label}`}
           </p>
         </div>

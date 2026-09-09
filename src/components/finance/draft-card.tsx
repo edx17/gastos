@@ -10,7 +10,7 @@ import type { TransactionInput, TransactionType } from '@/types/transaction';
 import type { CurrencyCode } from '@/types/currency';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input, Label, Select, Textarea } from '@/components/ui/input';
+import { Input, Label, Select, Switch, Textarea } from '@/components/ui/input';
 import { CategoryBadge } from './category-badge';
 import { CurrencySelector } from './currency-selector';
 
@@ -37,7 +37,7 @@ export function DraftCard({
   onCancel: () => void;
   saving?: boolean;
 }) {
-  const { categories, paymentMethods } = useWorkspace();
+  const { categories, paymentMethods, household, householdMembers } = useWorkspace();
   const { intent, suggestion } = draft;
 
   const [editing, setEditing] = React.useState(draft.action === 'ask');
@@ -53,6 +53,11 @@ export function DraftCard({
   );
   const [notes, setNotes] = React.useState('');
   const [askLearn, setAskLearn] = React.useState(false);
+  const [shared, setShared] = React.useState(false);
+  // Por defecto lo pagó quien está usando la app: es el caso de casi siempre.
+  const [paidBy, setPaidBy] = React.useState(
+    householdMembers.find((member) => member.user_id)?.id ?? householdMembers[0]?.id ?? '',
+  );
 
   const categoryChanged = categoryId !== (suggestion.category_id ?? '') || subcategoryId !== (suggestion.subcategory_id ?? '');
   const category = categories.find((c) => c.id === categoryId);
@@ -74,6 +79,8 @@ export function DraftCard({
     notes: notes.trim() || null,
     source: 'natural_language',
     ai_confidence: intent.confidence,
+    household_id: shared && household ? household.id : null,
+    paid_by: shared && paidBy ? paidBy : null,
   });
 
   const submit = (learn: SaveOptions['learn']) => {
@@ -273,6 +280,37 @@ export function DraftCard({
           </div>
         </div>
       )}
+
+      {household ? (
+        <div className="space-y-3 border-t border-border bg-accent/30 px-5 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Gasto de {household.name}</p>
+              <p className="text-xs text-muted-foreground">
+                Entra en el balance compartido en vez de contar sólo para vos.
+              </p>
+            </div>
+            <Switch
+              checked={shared}
+              onCheckedChange={setShared}
+              label={`Marcar como gasto de ${household.name}`}
+            />
+          </div>
+          {shared ? (
+            <div className="space-y-1.5 sm:max-w-xs">
+              <Label htmlFor="draft-paid-by">Lo pagó</Label>
+              <Select id="draft-paid-by" value={paidBy} onChange={(event) => setPaidBy(event.target.value)}>
+                <option value="">Sin especificar</option>
+                {householdMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.display_name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {askLearn ? (
         <div className="space-y-3 border-t border-border bg-accent/30 px-5 py-4">

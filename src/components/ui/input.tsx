@@ -56,17 +56,21 @@ export const Switch = ({
   onCheckedChange,
   id,
   disabled,
+  label,
 }: {
   checked: boolean;
   onCheckedChange: (value: boolean) => void;
   id?: string;
   disabled?: boolean;
+  /** El interruptor no tiene texto adentro: sin esto no se sabe qué prende. */
+  label?: string;
 }) => (
   <button
     type="button"
     role="switch"
     id={id}
     aria-checked={checked}
+    aria-label={label}
     disabled={disabled}
     onClick={() => onCheckedChange(!checked)}
     className={cn(

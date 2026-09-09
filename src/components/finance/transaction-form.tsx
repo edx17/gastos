@@ -204,7 +204,7 @@ export function TransactionForm({
                 Entra en el balance compartido en vez de contar sólo para vos.
               </p>
             </div>
-            <Switch checked={shared} onCheckedChange={setShared} />
+            <Switch checked={shared} onCheckedChange={setShared} label={`Marcar como gasto de ${household.name}`} />
           </div>
           {shared ? (
             <div className="space-y-1.5">
