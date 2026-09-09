@@ -21,6 +21,14 @@ export interface ParsedIntent {
    * cargaron cuando se compraron, y contarlo otra vez duplicaría el mes.
    */
   card_payment?: boolean;
+  /** El plan de cuotas cuando la frase lo dice: «en 6 cuotas», «cuota 3 de 12». */
+  installments?: {
+    count: number;
+    /** Desde qué cuota hay que cargar: 1 si la compra es de ahora. */
+    from: number;
+    /** Si el importe detectado es el precio total en vez del de cada cuota. */
+    amount_is_total: boolean;
+  };
   /** Cuando la frase era una compra o venta de moneda extranjera. */
   exchange_kind?: ExchangeKind | null;
   /** La cotización, sólo si la persona la dijo. */

@@ -9,6 +9,7 @@ import { findAmountCandidates, findWordAmount, pickBestAmount, type AmountCandid
 import { findMerchant } from './brands';
 import { describeExchange, findExchange, type ExchangeMatch } from './exchange';
 import { describeCardPayment, findCardPayment } from './card';
+import { findInstallments } from './installments';
 
 export interface ParseContext {
   today?: Date;
@@ -111,14 +112,19 @@ export function parseIntent(input: string, ctx: ParseContext = {}): ParsedIntent
   // por uno: si esto entrara como gasto, el mes quedaría contado dos veces.
   const cardPayment = findCardPayment(withoutDate);
 
-  // 5. Merchant
-  const merchantMatch = findMerchant(withoutDate);
+  // 5. ¿Es una compra en cuotas? Se saca antes de buscar el importe: si no, el
+  // «6» de «6 cuotas» compite por ser la plata.
+  const installments = findInstallments(withoutDate);
+  const withoutPlan = installments ? installments.rest : withoutDate;
 
-  // 6. Amount
-  const digitCandidates = findAmountCandidates(withoutDate).filter(
+  // 6. Merchant
+  const merchantMatch = findMerchant(withoutPlan);
+
+  // 7. Amount
+  const digitCandidates = findAmountCandidates(withoutPlan).filter(
     (c) => !merchantMatch || c.end <= merchantMatch.start || c.start >= merchantMatch.end,
   );
-  const best: AmountCandidate | null = pickBestAmount(digitCandidates) ?? findWordAmount(withoutDate);
+  const best: AmountCandidate | null = pickBestAmount(digitCandidates) ?? findWordAmount(withoutPlan);
 
   const distinctValues = Array.from(new Set(digitCandidates.map((c) => c.value)));
   const ambiguousAmount =
@@ -126,20 +132,20 @@ export function parseIntent(input: string, ctx: ParseContext = {}): ParsedIntent
     !digitCandidates.some((c) => c.hadSymbol || c.hadMultiplier || c.hadCurrencyWord) &&
     Math.max(...distinctValues) / Math.min(...distinctValues.filter((v) => v > 0)) < 5;
 
-  // 7. Type
+  // 8. Type
   const type = cardPayment ? 'transfer' : detectType(normalized);
   const typeExplicit =
     Boolean(cardPayment) ||
     TYPE_PATTERNS.some((p) => p.re.test(normalized)) ||
     (INTEREST_EARNED_RE.test(normalized) && !INTEREST_PAID_RE.test(normalized));
 
-  // 8. Payment method. Al resumen no se lo paga con la propia tarjeta.
+  // 9. Payment method. Al resumen no se lo paga con la propia tarjeta.
   const paymentMethod = cardPayment ? null : PAYMENT_PATTERNS.find((p) => p.re.test(normalized))?.label ?? null;
 
-  // 9. Description — what's left once the machine-readable bits are removed.
+  // 10. Description — what's left once the machine-readable bits are removed.
   const description = cardPayment
     ? describeCardPayment(cardPayment)
-    : buildDescription(withoutDate, best, merchantMatch?.alias ?? null, merchantMatch?.name ?? null) ||
+    : buildDescription(withoutPlan, best, merchantMatch?.alias ?? null, merchantMatch?.name ?? null) ||
       verbMeaning(normalized);
 
   const missing: ParsedField[] = [];
@@ -170,6 +176,7 @@ export function parseIntent(input: string, ctx: ParseContext = {}): ParsedIntent
     merchant: merchantMatch?.name ?? null,
     payment_method: paymentMethod,
     card_payment: Boolean(cardPayment),
+    installments: installments ? { count: installments.count, from: installments.from, amount_is_total: installments.amountIsTotal } : undefined,
     confidence: round(clamp(confidence, 0.05, 0.97), 2),
     missing,
     question: buildQuestion({ missing, amount, currency: currencyInfo.currency, type, ambiguousAmount, values: distinctValues }),

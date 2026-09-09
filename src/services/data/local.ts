@@ -2,6 +2,7 @@ import { endOfMonth, endOfWeek, startOfMonth, startOfWeek } from 'date-fns';
 import { env } from '@/config/env';
 import { lastNMonths, monthRange, previousRange, today, toISO, monthsUntil, addMonths } from '@/lib/date';
 import { convert } from '@/lib/money';
+import { expandInstallments } from './installments';
 import { normalizeText, round, uid } from '@/lib/utils';
 import { err } from '@/types/common';
 import type { Paginated, UUID } from '@/types/common';
@@ -36,6 +37,7 @@ import {
   merchantRanking,
   monthlySeries,
   paymentMethodBreakdown,
+  pendingInstallments,
   runningBalance,
   subcategoryBreakdown,
   summarize,
@@ -460,7 +462,19 @@ export class LocalDataClient implements DataClient {
     const rates = await this.getRateTable(userId);
     const created: Transaction[] = [];
 
-    for (const input of inputs) {
+    // Una compra en cuotas se abre en un gasto por mes; los ítems de un ticket
+    // se cuelgan sólo de la primera fila.
+    const expanded = inputs.flatMap((input) =>
+      input.installments
+        ? expandInstallments(input.installments, input.transaction_date).map((plan, offset) => ({
+            input,
+            plan,
+            first: offset === 0,
+          }))
+        : [{ input, plan: null as ReturnType<typeof expandInstallments>[number] | null, first: true }],
+    );
+
+    for (const { input, plan, first } of expanded) {
       if (!Number.isFinite(input.amount) || input.amount <= 0) {
         throw err('transaction/invalid-amount', 'El importe tiene que ser un número mayor a cero.');
       }
@@ -483,7 +497,7 @@ export class LocalDataClient implements DataClient {
         subcategory_id: input.subcategory_id ?? null,
         payment_method_id: input.payment_method_id ?? null,
         account_id: input.account_id ?? null,
-        transaction_date: input.transaction_date,
+        transaction_date: plan?.transaction_date ?? input.transaction_date,
         notes: input.notes ?? null,
         source: input.source ?? 'manual',
         ai_confidence: input.ai_confidence ?? null,
@@ -492,12 +506,15 @@ export class LocalDataClient implements DataClient {
         // id del usuario apunta a una fila que no existe.
         paid_by: input.paid_by ?? null,
         exchange_kind: input.exchange_kind ?? null,
+        installment_id: plan?.installment_id ?? null,
+        installment_number: plan?.installment_number ?? null,
+        installment_count: plan?.installment_count ?? null,
         created_by: userId,
         created_at: new Date().toISOString(),
       };
       db.transactions.push(row);
 
-      for (const item of input.items ?? []) {
+      for (const item of first ? input.items ?? [] : []) {
         db.transaction_items.push({
           id: uid(),
           transaction_id: row.id,
@@ -996,7 +1013,7 @@ export class LocalDataClient implements DataClient {
       (t) => t.transaction_date >= previous.from && t.transaction_date <= previous.to,
     );
 
-    const balance = runningBalance(db.transactions);
+    const balance = runningBalance(db.transactions, today());
 
     return {
       period: current,
@@ -1008,6 +1025,7 @@ export class LocalDataClient implements DataClient {
       },
       balance,
       holdings: currencyHoldings(db.transactions),
+      pending_installments: pendingInstallments(db.transactions, today()),
       top_categories: categoryBreakdown(currentRows, categories, { previous: previousRows }).slice(0, 6),
       recent_days: dailySeries(currentRows, range.from, range.to),
     };

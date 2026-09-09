@@ -22,6 +22,18 @@ export interface ComparisonMetric {
   higher_is_better: boolean;
 }
 
+/** Lo que falta pagar de una compra en cuotas. */
+export interface PendingInstallment {
+  installment_id: UUID;
+  description: string;
+  installment_count: number;
+  paid_count: number;
+  pending_count: number;
+  /** En la moneda base. */
+  pending_amount: number;
+  next_date: ISODate;
+}
+
 /** Cuánto hay de una moneda que se compró, y a qué precio se armó. */
 export interface CurrencyHolding {
   currency: CurrencyCode;
@@ -45,6 +57,7 @@ export interface DashboardSummary {
   top_categories: CategoryBreakdown[];
   recent_days: DailyPoint[];
   holdings: CurrencyHolding[];
+  pending_installments: PendingInstallment[];
 }
 
 export interface CategoryBreakdown {

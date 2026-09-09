@@ -435,4 +435,85 @@ begin
   raise notice 'OK · taxonomía: la subcategoría nueva llega a las cuentas que ya existían';
 end $$;
 
+-- Cuotas: seis gastos, uno por mes; el saldo no descuenta lo que todavía no
+-- venció; lo pendiente se lista por compra.
+reset role;
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  cat uuid;
+  plan uuid := gen_random_uuid();
+  antes numeric;
+  despues numeric;
+  fila record;
+  encontrado boolean := false;
+  n integer;
+begin
+  select id into cat from public.categories where user_id = ana and slug = 'ropa';
+  select public.account_balance() into antes;
+
+  -- Zapatillas en 6 cuotas de 20.000, la primera hoy.
+  insert into public.transactions (user_id, type, amount, base_amount, description, category_id,
+    transaction_date, source, installment_id, installment_number, installment_count)
+  select ana, 'expense', 20000, 20000, 'Zapatillas', cat,
+    (current_date + make_interval(months => i - 1))::date, 'manual', plan, i, 6
+  from generate_series(1, 6) as i;
+
+  select public.account_balance() into despues;
+  -- Sólo pesa la cuota de hoy: las otras cinco todavía no vencieron.
+  assert antes - despues = 20000,
+    format('El saldo debería bajar sólo 20000, bajó %s', antes - despues);
+
+  for fila in select * from public.pending_installments() loop
+    if fila.installment_id = plan then
+      encontrado := true;
+      assert fila.pending_count = 5, format('Deberían quedar 5 cuotas, quedan %s', fila.pending_count);
+      assert fila.paid_count = 1, format('Debería haber 1 cuota pasada, hay %s', fila.paid_count);
+      assert fila.pending_amount = 100000, format('Faltarían 100000, dice %s', fila.pending_amount);
+      assert fila.description = 'Zapatillas', format('La descripción es %s', fila.description);
+    end if;
+  end loop;
+  assert encontrado, 'El plan de cuotas no apareció entre las pendientes';
+
+  -- Los gastos del mes toman la cuota de este mes, no el total de la compra.
+  select expense into despues from public.report_summary(date_trunc('month', current_date)::date,
+    (date_trunc('month', current_date) + interval '1 month - 1 day')::date);
+  assert despues >= 20000, 'La cuota de este mes no entró en el resumen';
+
+  -- Una compra en cuotas no puede quedar a medio marcar.
+  begin
+    insert into public.transactions (user_id, type, amount, base_amount, description,
+      transaction_date, source, installment_number)
+    values (ana, 'expense', 1000, 1000, 'Mal cargado', current_date, 'manual', 2);
+    raise exception 'Se pudo guardar una cuota sin plan';
+  exception
+    when check_violation then null;
+  end;
+
+  select count(*) into n from public.transactions where installment_id = plan;
+  assert n = 6, format('Deberían haber quedado 6 cuotas, hay %s', n);
+
+  raise notice 'OK · cuotas: seis vencimientos, saldo al día y pendientes por compra';
+end $$;
+
+-- Una deuda es una cuenta con el signo al revés y resta del patrimonio.
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  antes numeric;
+  despues numeric;
+begin
+  select public.net_worth() into antes;
+
+  insert into public.accounts (user_id, name, currency, kind, balance)
+  values (ana, 'Préstamo Galicia', 'ARS', 'debt', -1200000);
+
+  select public.net_worth() into despues;
+  assert antes - despues = 1200000, format('La deuda debería restar 1200000, restó %s', antes - despues);
+
+  raise notice 'OK · deudas: una cuenta en negativo baja el patrimonio';
+end $$;
+
 reset role;

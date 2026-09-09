@@ -3,6 +3,7 @@ import { endOfMonth, endOfWeek, startOfMonth, startOfWeek } from 'date-fns';
 import { env } from '@/config/env';
 import { lastNMonths, monthRange, previousRange, today, toISO } from '@/lib/date';
 import { convert } from '@/lib/money';
+import { expandInstallments } from './installments';
 import { normalizeText, round } from '@/lib/utils';
 import { err } from '@/types/common';
 import type { Paginated, UUID } from '@/types/common';
@@ -20,6 +21,7 @@ import type {
   DailyPoint,
   DashboardSummary,
   MonthlyPoint,
+  PendingInstallment,
   PeriodSummary,
   RecurringExpense,
   ReportBundle,
@@ -348,7 +350,16 @@ export class SupabaseDataClient implements DataClient {
     const profile = await this.getProfile(userId);
     const rates = await this.getRateTable(userId);
 
-    const payload = inputs.map((input) => {
+    // Una compra en cuotas se abre en un gasto por mes antes de armar la carga.
+    // `source` recuerda de qué entrada salió cada fila, porque los ítems de un
+    // ticket se cuelgan de una sola.
+    const expanded = inputs.flatMap((input, source) =>
+      input.installments
+        ? expandInstallments(input.installments, input.transaction_date).map((plan) => ({ input, source, plan }))
+        : [{ input, source, plan: null as ReturnType<typeof expandInstallments>[number] | null }],
+    );
+
+    const payload = expanded.map(({ input, plan }) => {
       if (!Number.isFinite(input.amount) || input.amount <= 0) {
         throw err('transaction/invalid-amount', 'El importe tiene que ser un número mayor a cero.');
       }
@@ -369,7 +380,7 @@ export class SupabaseDataClient implements DataClient {
         subcategory_id: input.subcategory_id ?? null,
         payment_method_id: input.payment_method_id ?? null,
         account_id: input.account_id ?? null,
-        transaction_date: input.transaction_date,
+        transaction_date: plan?.transaction_date ?? input.transaction_date,
         notes: input.notes ?? null,
         source: input.source ?? 'manual',
         ai_confidence: input.ai_confidence ?? null,
@@ -378,6 +389,9 @@ export class SupabaseDataClient implements DataClient {
         // id del usuario apunta a una fila que no existe.
         paid_by: input.paid_by ?? null,
         exchange_kind: input.exchange_kind ?? null,
+        installment_id: plan?.installment_id ?? null,
+        installment_number: plan?.installment_number ?? null,
+        installment_count: plan?.installment_count ?? null,
         created_by: userId,
       };
     });
@@ -386,8 +400,10 @@ export class SupabaseDataClient implements DataClient {
     if (error) throw dbError(error);
     const rows = (data ?? []) as Transaction[];
 
-    const items = inputs.flatMap((input, index) =>
-      (input.items ?? []).map((item) => ({
+    // Los ítems se cuelgan de la primera fila de cada entrada: una compra en
+    // cuotas no repite el detalle del ticket seis veces.
+    const items = expanded.flatMap(({ input, source }, index) =>
+      (expanded.findIndex((entry) => entry.source === source) !== index ? [] : input.items ?? []).map((item) => ({
         transaction_id: rows[index]?.id,
         description: item.description,
         quantity: item.quantity,
@@ -850,7 +866,7 @@ export class SupabaseDataClient implements DataClient {
     const profile = await this.getProfile(userId);
     const previous = previousRange({ ...range, label: '' });
 
-    const [current, before, categories, daily, balance, holdings] = await Promise.all([
+    const [current, before, categories, daily, balance, holdings, installments] = await Promise.all([
       this.summaryRpc(range.from, range.to, profile.base_currency),
       this.summaryRpc(previous.from, previous.to, profile.base_currency),
       this.categoryRpc(range.from, range.to, previous),
@@ -858,6 +874,8 @@ export class SupabaseDataClient implements DataClient {
       this.db.rpc('account_balance'),
       // Las tenencias se suman en la base: viaja una fila por moneda, no el historial.
       this.db.rpc('currency_holdings'),
+      // Y las cuotas, una fila por compra en vez de todos los vencimientos.
+      this.db.rpc('pending_installments'),
     ]);
 
     return {
@@ -876,6 +894,13 @@ export class SupabaseDataClient implements DataClient {
         amount: Number(row.amount),
         invested: Number(row.invested),
         avg_rate: row.avg_rate === null ? null : Number(row.avg_rate),
+      })),
+      pending_installments: ((installments.data ?? []) as PendingInstallment[]).map((row) => ({
+        ...row,
+        installment_count: Number(row.installment_count),
+        paid_count: Number(row.paid_count),
+        pending_count: Number(row.pending_count),
+        pending_amount: Number(row.pending_amount),
       })),
     };
   }

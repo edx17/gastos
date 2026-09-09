@@ -8,6 +8,7 @@ import { useAsync } from '@/hooks/use-async';
 import { buildInsights } from '@/services/analytics/insights';
 import { StatCard } from '@/components/finance/stat-card';
 import { HoldingsCard } from '@/components/finance/holdings-card';
+import { InstallmentsCard } from '@/components/finance/installments-card';
 import { NaturalLanguageInput } from '@/components/finance/natural-language-input';
 import { TransactionRow } from '@/components/finance/transaction-row';
 import { AiInsightCard } from '@/components/finance/ai-insight';
@@ -106,6 +107,10 @@ export default function DashboardPage() {
               hint="Desde que usás Crocante"
             />
           </div>
+
+          {dashboard.data.pending_installments.length ? (
+            <InstallmentsCard plans={dashboard.data.pending_installments} currency={currency} />
+          ) : null}
 
           {dashboard.data.holdings.length ? (
             <HoldingsCard holdings={dashboard.data.holdings} rates={rates} baseCurrency={currency} />

@@ -57,6 +57,11 @@ export function TransactionRow({
           {category ? (
             <CategoryBadge name={category.name} subcategory={subcategory?.name} color={category.color} size="sm" />
           ) : null}
+          {transaction.installment_number && transaction.installment_count ? (
+            <span>
+              · cuota {transaction.installment_number} de {transaction.installment_count}
+            </span>
+          ) : null}
           {paymentMethodName ? <span>· {paymentMethodName}</span> : null}
         </div>
       </div>

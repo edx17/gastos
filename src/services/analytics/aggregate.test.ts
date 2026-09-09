@@ -176,8 +176,8 @@ describe('cambio de moneda', () => {
   });
 
   it('descuenta del saldo los pesos que se fueron y suma los que volvieron', () => {
-    expect(runningBalance([fx('buy', 100, 145000, 1450)])).toBe(-145000);
-    expect(runningBalance([fx('buy', 100, 145000, 1450), fx('sell', 100, 160000, 1600)])).toBe(15000);
+    expect(runningBalance([fx('buy', 100, 145000, 1450)], '2026-09-30')).toBe(-145000);
+    expect(runningBalance([fx('buy', 100, 145000, 1450), fx('sell', 100, 160000, 1600)], '2026-09-30')).toBe(15000);
   });
 
   it('acumula la tenencia y el precio promedio de compra', () => {
@@ -200,7 +200,7 @@ describe('cambio de moneda', () => {
 
   it('una transferencia común no toca el saldo ni las tenencias', () => {
     const plain = makeTransaction({ type: 'transfer', amount: 50000, base_amount: 50000, transaction_date: '2026-09-08' });
-    expect(runningBalance([plain])).toBe(0);
+    expect(runningBalance([plain], '2026-09-30')).toBe(0);
     expect(currencyHoldings([plain])).toEqual([]);
   });
 });

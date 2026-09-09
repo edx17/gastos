@@ -12,6 +12,7 @@ import type {
   DailyPoint,
   MerchantRanking,
   MonthlyPoint,
+  PendingInstallment,
   PeriodSummary,
   SubcategoryBreakdown,
 } from '@/types/report';
@@ -29,10 +30,15 @@ export const isEarning = (t: Transaction) => t.type === 'income' || t.type === '
  * Comprar moneda extranjera descuenta los pesos que salieron y venderla los
  * suma; el resto de las transferencias mueven plata de un bolsillo propio a
  * otro y no cambian el total.
+ *
+ * Lo que vence más adelante —la cuota de noviembre— no salió todavía del
+ * bolsillo, así que la cuenta se corta hoy.
  */
-export function runningBalance(rows: Transaction[]): number {
+export function runningBalance(rows: Transaction[], until: ISODate): number {
   return round(
-    rows.reduce((acc, t) => {
+    rows
+      .filter((t) => t.transaction_date <= until)
+      .reduce((acc, t) => {
       if (isEarning(t)) return acc + t.base_amount;
       if (isSpending(t)) return acc - t.base_amount;
       if (t.exchange_kind === 'buy') return acc - t.base_amount;
@@ -41,6 +47,31 @@ export function runningBalance(rows: Transaction[]): number {
     }, 0),
     2,
   );
+}
+
+/** Lo que falta pagar de cada compra en cuotas, una fila por compra. */
+export function pendingInstallments(rows: Transaction[], until: ISODate): PendingInstallment[] {
+  const plans = new Map<string, Transaction[]>();
+  for (const row of rows) {
+    if (!row.installment_id) continue;
+    plans.set(row.installment_id, [...(plans.get(row.installment_id) ?? []), row]);
+  }
+
+  return [...plans.entries()]
+    .map(([installment_id, group]) => {
+      const pending = group.filter((row) => row.transaction_date > until);
+      return {
+        installment_id,
+        description: group[0].description,
+        installment_count: group[0].installment_count ?? group.length,
+        paid_count: group.length - pending.length,
+        pending_count: pending.length,
+        pending_amount: round(pending.reduce((acc, row) => acc + row.base_amount, 0), 2),
+        next_date: pending.map((row) => row.transaction_date).sort()[0] ?? '',
+      };
+    })
+    .filter((plan) => plan.pending_count > 0)
+    .sort((a, b) => a.next_date.localeCompare(b.next_date));
 }
 
 /**

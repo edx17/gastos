@@ -40,6 +40,10 @@ export interface Transaction {
   recurring_id?: UUID | null;
   paid_by?: UUID | null;
   created_by?: UUID | null;
+  /** Agrupa las cuotas de una misma compra. */
+  installment_id?: UUID | null;
+  installment_number?: number | null;
+  installment_count?: number | null;
   created_at: ISODateTime;
   updated_at?: ISODateTime;
 }
@@ -54,6 +58,13 @@ export interface TransactionItem {
   category_id: UUID | null;
   subcategory_id: UUID | null;
   created_at: ISODateTime;
+}
+
+/** Una compra en cuotas: `amount` es lo que se paga por cuota, no el total. */
+export interface InstallmentPlan {
+  count: number;
+  /** Desde qué cuota cargar. 1 si la compra es de ahora. */
+  from?: number;
 }
 
 export interface TransactionInput {
@@ -75,6 +86,8 @@ export interface TransactionInput {
   paid_by?: UUID | null;
   exchange_rate?: number;
   exchange_kind?: ExchangeKind | null;
+  /** Cuando está, el movimiento se guarda como un gasto por mes. */
+  installments?: InstallmentPlan;
   items?: Omit<TransactionItem, 'id' | 'transaction_id' | 'created_at'>[];
 }
 
@@ -110,7 +123,7 @@ export interface PaymentMethod {
   created_at: ISODateTime;
 }
 
-export type AccountKind = 'checking' | 'savings' | 'cash' | 'investment' | 'wallet';
+export type AccountKind = 'checking' | 'savings' | 'cash' | 'investment' | 'wallet' | 'debt';
 
 /**
  * Un lugar donde hay plata: la caja de ahorro, el FIMA, Reservas de Mercado

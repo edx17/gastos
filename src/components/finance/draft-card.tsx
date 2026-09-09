@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { CalendarDays, Check, HelpCircle, Info, Pencil, Sparkles, Store, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { CalendarDays, Check, CreditCard, HelpCircle, Info, Pencil, Sparkles, Store, X } from 'lucide-react';
+import { cn, round as round2 } from '@/lib/utils';
 import { formatMoney, parseAmountInput } from '@/lib/money';
 import { currencyNoun, describeExchange } from '@/services/nlp/exchange';
 import { humanDate, today as todayISO } from '@/lib/date';
@@ -66,6 +66,8 @@ export function DraftCard({
   const [shared, setShared] = React.useState(false);
   // Si no dijeron la cotización, arrancamos con la que tenga configurada.
   const [rate, setRate] = React.useState(String(intent.exchange_rate ?? rates[intent.currency] ?? ''));
+  const [count, setCount] = React.useState(String(intent.installments?.count ?? ''));
+  const [from, setFrom] = React.useState(String(intent.installments?.from ?? 1));
   // Por defecto lo pagó quien está usando la app: es el caso de casi siempre.
   const [paidBy, setPaidBy] = React.useState(
     householdMembers.find((member) => member.user_id)?.id ?? householdMembers[0]?.id ?? '',
@@ -84,9 +86,19 @@ export function DraftCard({
   const baseTotal = parsedAmount * parsedRate;
   const baseCurrency = intent.currency === profile.base_currency ? intent.currency : profile.base_currency;
 
+  // Cuotas: el importe que se guarda es el de CADA cuota. Si la persona dijo el
+  // precio total («120 lucas en 6 cuotas»), acá se divide.
+  const plan = intent.installments ?? null;
+  const parsedCount = Math.trunc(Number(count) || 0);
+  const parsedFrom = Math.trunc(Number(from) || 1);
+  const planValid = Boolean(plan) && parsedCount >= 2 && parsedCount <= 120 && parsedFrom >= 1 && parsedFrom <= parsedCount;
+  const perInstallment = plan && planValid && plan.amount_is_total ? parsedAmount / parsedCount : parsedAmount;
+  const planTotal = planValid ? perInstallment * parsedCount : 0;
+  const planRemaining = planValid ? perInstallment * (parsedCount - parsedFrom + 1) : 0;
+
   const canSave = exchangeKind
     ? amountValid && parsedRate > 0
-    : amountValid && description.trim().length > 0;
+    : amountValid && description.trim().length > 0 && (!plan || planValid);
 
   const buildInput = (): TransactionInput =>
     exchangeKind
@@ -117,6 +129,9 @@ export function DraftCard({
           ai_confidence: intent.confidence,
           household_id: shared && household ? household.id : null,
           paid_by: shared && paidBy ? paidBy : null,
+          ...(plan && planValid
+            ? { amount: round2(perInstallment), installments: { count: parsedCount, from: parsedFrom } }
+            : {}),
         };
 
   const submit = (learn: SaveOptions['learn']) => {
@@ -384,6 +399,58 @@ export function DraftCard({
           </div>
         </div>
       )}
+
+      {plan ? (
+        <div className="space-y-3 border-t border-border bg-accent/30 px-5 py-4">
+          <div className="flex items-start gap-2 text-xs text-muted-foreground">
+            <CreditCard className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+            <p>
+              Se guarda como un gasto por mes, no todo hoy. Así cada mes muestra lo que realmente pesa ese mes.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="draft-count">Cuántas cuotas</Label>
+              <Input
+                id="draft-count"
+                inputMode="numeric"
+                value={count}
+                onChange={(event) => setCount(event.target.value)}
+                placeholder="6"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="draft-from">Vas por la cuota</Label>
+              <Input
+                id="draft-from"
+                inputMode="numeric"
+                value={from}
+                onChange={(event) => setFrom(event.target.value)}
+                placeholder="1"
+              />
+              <p className="text-xs text-muted-foreground">
+                Si ya venías pagándola, poné en cuál vas: se cargan sólo las que faltan.
+              </p>
+            </div>
+          </div>
+
+          {planValid && amountValid ? (
+            <div className="clay-inset space-y-1 rounded-2xl p-4">
+              <p className="num text-xl font-semibold tracking-tight">
+                {parsedCount - parsedFrom + 1} × {formatMoney(perInstallment, { currency })}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {parsedFrom > 1
+                  ? `Te faltan ${formatMoney(planRemaining, { currency })} de un total de ${formatMoney(planTotal, { currency })}. La cuota ${parsedFrom} vence ${humanDate(date).toLowerCase()}.`
+                  : `Total ${formatMoney(planTotal, { currency })}. La primera vence ${humanDate(date).toLowerCase()} y las demás mes a mes.`}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-warning">Revisá el plan: tienen que ser entre 2 y 120 cuotas.</p>
+          )}
+        </div>
+      ) : null}
 
       {household && !exchangeKind ? (
         <div className="space-y-3 border-t border-border bg-accent/30 px-5 py-3">

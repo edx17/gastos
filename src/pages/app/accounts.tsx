@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { Landmark, Pencil, Plus, Trash2 } from 'lucide-react';
 import { formatMoney } from '@/lib/money';
-import { formatDateFull } from '@/lib/date';
+import { round } from '@/lib/utils';
+import { formatDateFull, today as todayISO } from '@/lib/date';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { useAsync } from '@/hooks/use-async';
 import { useToast } from '@/components/ui/toast';
@@ -22,6 +23,7 @@ const KINDS: { value: AccountKind; label: string; hint: string }[] = [
   { value: 'investment', label: 'Inversión', hint: 'FIMA, plazo fijo, fondos, acciones.' },
   { value: 'wallet', label: 'Billetera', hint: 'Mercado Pago, Ualá, Belo.' },
   { value: 'cash', label: 'Efectivo', hint: 'Lo que tenés en la mano o en el cajón.' },
+  { value: 'debt', label: 'Deuda', hint: 'Un préstamo o un saldo que debés. Va con saldo negativo y resta del total.' },
 ];
 
 const kindLabel = (kind: AccountKind) => KINDS.find((option) => option.value === kind)?.label ?? kind;
@@ -45,7 +47,7 @@ const empty = (currency: CurrencyCode): AccountInput => ({
  * movimientos daría un número falso con dos decimales de precisión.
  */
 export default function AccountsPage() {
-  const { client, userId, profile, rates, revision, bumpRevision } = useWorkspace();
+  const { client, userId, profile, categories, rates, revision, bumpRevision } = useWorkspace();
   const toast = useToast();
   const base = profile.base_currency;
 
@@ -56,7 +58,21 @@ export default function AccountsPage() {
   const [removing, setRemoving] = React.useState<Account | null>(null);
   const [draft, setDraft] = React.useState<AccountInput>(() => empty(base));
   const [amount, setAmount] = React.useState('');
+  const [asYield, setAsYield] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+
+  // Los intereses diarios del FIMA o de Reservas no se cargan uno por uno: se
+  // actualiza el saldo y la diferencia se puede registrar como rendimiento.
+  const typedBalance = Number(String(amount).replace(/\./g, '').replace(',', '.'));
+  const delta = editing && Number.isFinite(typedBalance) ? round(typedBalance - editing.balance, 2) : 0;
+
+  const yieldCategory = React.useMemo(() => {
+    const category = categories.find((c) => c.slug === 'ingresos');
+    return {
+      category_id: category?.id ?? null,
+      subcategory_id: category?.subcategories.find((sub) => sub.slug === 'rendimientos')?.id ?? null,
+    };
+  }, [categories]);
 
   const rows = accounts.data ?? [];
   const total = rows
@@ -67,6 +83,7 @@ export default function AccountsPage() {
   const openNew = () => {
     setDraft(empty(base));
     setAmount('');
+    setAsYield(false);
     setEditing(null);
     setCreating(true);
   };
@@ -82,6 +99,7 @@ export default function AccountsPage() {
       include_in_net_worth: account.include_in_net_worth,
     });
     setAmount(String(account.balance));
+    setAsYield(false);
     setEditing(account);
     setCreating(true);
   };
@@ -102,7 +120,20 @@ export default function AccountsPage() {
       const input = { ...draft, balance };
       if (editing) {
         await client.updateAccount(editing.id, input);
-        toast.success('Cuenta actualizada');
+        if (asYield && delta > 0) {
+          await client.createTransaction(userId, {
+            type: 'income',
+            amount: delta,
+            currency: editing.currency,
+            description: `Rendimientos de ${editing.name}`,
+            transaction_date: todayISO(),
+            category_id: yieldCategory.category_id,
+            subcategory_id: yieldCategory.subcategory_id,
+            account_id: editing.id,
+            source: 'manual',
+          });
+        }
+        toast.success(asYield && delta > 0 ? 'Saldo y rendimiento cargados' : 'Cuenta actualizada');
       } else {
         await client.createAccount(userId, input);
         toast.success('Cuenta agregada');
@@ -272,6 +303,29 @@ export default function AccountsPage() {
               />
             </div>
           </div>
+
+          {editing && delta !== 0 ? (
+            <div className="space-y-3 rounded-md bg-accent/40 p-3 sm:col-span-2">
+              <p className="text-sm">
+                Antes tenías{' '}
+                <strong className="num">{formatMoney(editing.balance, { currency: editing.currency })}</strong>
+                {editing.balance_updated_at ? ` al ${formatDateFull(editing.balance_updated_at)}` : ''}. La diferencia
+                es <strong className="num">{formatMoney(delta, { currency: editing.currency })}</strong>.
+              </p>
+              {delta > 0 ? (
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Registrarlo como rendimiento</p>
+                    <p className="text-xs text-muted-foreground">
+                      Entra como ingreso y aparece en tus reportes. Si además depositaste o sacaste plata, la
+                      diferencia no es sólo rendimiento: dejalo apagado.
+                    </p>
+                  </div>
+                  <Switch checked={asYield} onCheckedChange={setAsYield} label="Registrar la diferencia como rendimiento" />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="account-notes">Notas</Label>
