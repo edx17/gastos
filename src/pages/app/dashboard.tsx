@@ -1,18 +1,19 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, PiggyBank, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
-import { monthRange, previousRange } from '@/lib/date';
+import { monthRange, previousRange, today as todayISO } from '@/lib/date';
 import { formatPercent } from '@/lib/money';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { useAsync } from '@/hooks/use-async';
 import { buildInsights } from '@/services/analytics/insights';
 import { StatCard } from '@/components/finance/stat-card';
 import { HoldingsCard } from '@/components/finance/holdings-card';
+import { NetWorthCard } from '@/components/finance/net-worth-card';
 import { InstallmentsCard } from '@/components/finance/installments-card';
 import { NaturalLanguageInput } from '@/components/finance/natural-language-input';
 import { TransactionRow } from '@/components/finance/transaction-row';
 import { AiInsightCard } from '@/components/finance/ai-insight';
-import { CategoryPieChart, ChartCard, DailySpendChart } from '@/components/finance/charts';
+import { CategoryPieChart, ChartCard } from '@/components/finance/charts';
 import { ErrorNote } from '@/components/finance/error-note';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -29,6 +30,7 @@ export default function DashboardPage() {
   const currency = profile.base_currency;
 
   const dashboard = useAsync(() => client.getDashboard(userId, range), [userId, range.from, range.to, revision]);
+  const accounts = useAsync(() => client.listAccounts(userId), [userId, revision]);
   const budgets = useAsync(() => client.getBudgetProgress(userId), [userId, revision]);
   const recurring = useAsync(() => client.listRecurring(userId), [userId, revision]);
 
@@ -47,7 +49,12 @@ export default function DashboardPage() {
     });
   }, [dashboard.data, history, categories, recurring.data, budgets.data, range, currency]);
 
-  const recent = history.slice(0, 6);
+  // Las cuotas que todavía no vencieron viven en el futuro: no son «lo último
+  // que hiciste». Se miran en «Cuotas por pagar» y en el calendario.
+  const recent = React.useMemo(() => {
+    const hoy = todayISO();
+    return history.filter((row) => row.transaction_date <= hoy).slice(0, 6);
+  }, [history]);
 
   return (
     <div className="space-y-6">
@@ -71,7 +78,7 @@ export default function DashboardPage() {
         </div>
       ) : dashboard.data ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-3">
             <StatCard
               label="Ingresos del mes"
               value={dashboard.data.period.income}
@@ -97,16 +104,20 @@ export default function DashboardPage() {
               accent="savings"
               hint={`Tasa ${formatPercent(dashboard.data.period.savings_rate)}`}
             />
-            {/* No es "lo que tenés": es lo que sobró de lo que entró y salió desde
-                que usás la app. Lo que tenés está en Cuentas. */}
-            <StatCard
-              label="Ahorro acumulado"
-              value={dashboard.data.balance}
-              currency={currency}
-              icon={Wallet}
-              hint="Desde que usás Crocante"
-            />
           </div>
+
+          {/* Lo que hay hoy, que es distinto del ahorro del mes. Va arriba de
+              todo porque es la pregunta con la que uno abre la app, y porque
+              sin esto los números del mes parecen decir que no tenés nada. */}
+          <NetWorthCard accounts={accounts.data ?? []} rates={rates} baseCurrency={currency} />
+
+          {accounts.data?.length ? (
+            <p className="text-xs text-muted-foreground">
+              Las dos cosas conviven: arriba está lo que pasó este mes, acá lo que tenés. Pueden no cerrar entre sí y
+              está bien —una compra en cuotas se paga en meses siguientes, los dólares comprados no son un gasto, y
+              los movimientos sólo cuentan desde que empezaste a usar la app.
+            </p>
+          ) : null}
 
           {dashboard.data.pending_installments.length ? (
             <InstallmentsCard plans={dashboard.data.pending_installments} currency={currency} />
@@ -116,8 +127,8 @@ export default function DashboardPage() {
             <HoldingsCard holdings={dashboard.data.holdings} rates={rates} baseCurrency={currency} />
           ) : null}
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard title="Gastos por categoría" description={range.label}>
+          <div className="grid gap-4">
+            <ChartCard title="En qué se te fue este mes" description={range.label}>
               {dashboard.data.top_categories.length ? (
                 <CategoryPieChart data={dashboard.data.top_categories} currency={currency} />
               ) : (
@@ -127,9 +138,6 @@ export default function DashboardPage() {
               )}
             </ChartCard>
 
-            <ChartCard title="Gasto diario" description="Para detectar los días caros de un vistazo">
-              <DailySpendChart data={dashboard.data.recent_days} currency={currency} />
-            </ChartCard>
           </div>
         </>
       ) : null}

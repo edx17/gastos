@@ -204,3 +204,34 @@ describe('cambio de moneda', () => {
     expect(currencyHoldings([plain])).toEqual([]);
   });
 });
+
+describe('cuotas y el resto de la app', () => {
+  it('una compra en cuotas no se detecta como gasto recurrente', () => {
+    const plan = Array.from({ length: 6 }, (_, i) =>
+      makeTransaction({
+        amount: 20000,
+        base_amount: 20000,
+        description: 'Zapatillas',
+        merchant_name: 'Dexter',
+        transaction_date: `2026-0${i + 1}-08`,
+        installment_id: 'plan-1',
+        installment_number: i + 1,
+        installment_count: 6,
+      }),
+    );
+    expect(detectRecurring(plan, 'u1')).toEqual([]);
+  });
+
+  it('un gasto fijo de verdad sí se detecta', () => {
+    const netflix = Array.from({ length: 6 }, (_, i) =>
+      makeTransaction({
+        amount: 9500,
+        base_amount: 9500,
+        description: 'Netflix',
+        merchant_name: 'Netflix',
+        transaction_date: `2026-0${i + 1}-08`,
+      }),
+    );
+    expect(detectRecurring(netflix, 'u1').length).toBeGreaterThan(0);
+  });
+});

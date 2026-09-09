@@ -2,9 +2,15 @@
  * Junta todas las migraciones en un único archivo, en orden, para poder aplicarlas
  * pegándolas una sola vez en el SQL Editor de Supabase (sin instalar la CLI).
  *
- *   node scripts/bundle-migrations.mjs > crocante-migraciones.sql
+ *   node scripts/bundle-migrations.mjs
+ *
+ * El archivo lo escribe el script, no la consola. Redirigir la salida
+ * (`node ... > archivo.sql`) rompe los acentos en PowerShell: la consola
+ * reinterpreta los bytes UTF-8 con la página de códigos local y «Débito» llega
+ * a la base como «D├®bito». Escribiéndolo desde acá el texto sale en UTF-8
+ * pase lo que pase.
  */
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -41,4 +47,13 @@ for (const file of files) {
   );
 }
 
-process.stdout.write(parts.join('\n'));
+const target = fileURLToPath(new URL('../crocante-migraciones.sql', import.meta.url));
+const sql = parts.join('\n');
+
+await writeFile(target, sql, 'utf8');
+
+// El aviso va por stderr para no ensuciar el archivo si alguien igual redirige.
+process.stderr.write(
+  `Escrito crocante-migraciones.sql (${files.length} migraciones, ${(Buffer.byteLength(sql) / 1024).toFixed(0)} kB).\n` +
+    'Pegá ese archivo completo en el SQL Editor de Supabase.\n',
+);

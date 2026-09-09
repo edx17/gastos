@@ -141,6 +141,8 @@ export class SupabaseDataClient implements DataClient {
     if (patch.locale !== undefined) payload.locale = patch.locale;
     if (patch.timezone !== undefined) payload.timezone = patch.timezone;
     if (patch.ai !== undefined) payload.ai_preferences = patch.ai;
+    if (patch.default_payment_method_id !== undefined) payload.default_payment_method_id = patch.default_payment_method_id;
+    if (patch.require_payment_method !== undefined) payload.require_payment_method = patch.require_payment_method;
     if (patch.onboarding_done !== undefined) payload.onboarding_done = patch.onboarding_done;
     if (patch.favorite_category_ids !== undefined) payload.favorite_category_ids = patch.favorite_category_ids;
 
@@ -1228,6 +1230,8 @@ function rowToProfile(row: any): Profile {
       share_data_with_ai: true,
       ...(row.ai_preferences ?? {}),
     },
+    default_payment_method_id: row.default_payment_method_id ?? null,
+    require_payment_method: row.require_payment_method ?? false,
     onboarding_done: row.onboarding_done ?? false,
     favorite_category_ids: row.favorite_category_ids ?? [],
     created_at: row.created_at,

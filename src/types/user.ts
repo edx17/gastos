@@ -28,6 +28,10 @@ export interface Profile {
   locale: string;
   timezone: string;
   ai: AiPreferences;
+  /** Con qué se paga habitualmente. Reemplaza al «Efectivo» que trae el alta. */
+  default_payment_method_id?: UUID | null;
+  /** Cuando está en true, no se guarda un movimiento sin medio de pago. */
+  require_payment_method: boolean;
   onboarding_done: boolean;
   favorite_category_ids: UUID[];
   created_at: ISODateTime;

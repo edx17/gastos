@@ -330,7 +330,7 @@ export default function SettingsPage() {
             <CardDescription>No guardamos números completos de tarjeta, solo un alias y los últimos 4 dígitos.</CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-1.5">
             {paymentMethods.map((method) => (
               <Badge key={method.id} variant="secondary">
@@ -338,6 +338,47 @@ export default function SettingsPage() {
                 {method.last4 ? ` ····${method.last4}` : ''}
               </Badge>
             ))}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="default-payment">El que usás casi siempre</Label>
+            <Select
+              id="default-payment"
+              value={profile.default_payment_method_id ?? ''}
+              onChange={async (event) => {
+                await client.updateProfile(userId, { default_payment_method_id: event.target.value || null });
+                await refreshProfile();
+                toast.success('Listo', 'Los movimientos nuevos empiezan con ese medio de pago.');
+              }}
+            >
+              <option value="">Sin preferencia</option>
+              {paymentMethods.map((method) => (
+                <option key={method.id} value={method.id}>
+                  {method.name}
+                </option>
+              ))}
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Viene seleccionado al cargar un movimiento. Si en la frase decís otro, gana el que dijiste.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-md bg-accent/40 p-3">
+            <div>
+              <p className="text-sm font-medium">Pedirlo siempre</p>
+              <p className="text-xs text-muted-foreground">
+                No deja guardar un gasto sin decir con qué se pagó. Sirve para que después cierre el resumen de la
+                tarjeta.
+              </p>
+            </div>
+            <Switch
+              checked={profile.require_payment_method}
+              onCheckedChange={async (value) => {
+                await client.updateProfile(userId, { require_payment_method: value });
+                await refreshProfile();
+              }}
+              label="Pedir siempre el medio de pago"
+            />
           </div>
           <div className="flex gap-2">
             <Input

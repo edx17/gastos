@@ -1241,6 +1241,8 @@ export class LocalDataClient implements DataClient {
         learn_from_corrections: true,
         share_data_with_ai: true,
       },
+      default_payment_method_id: null,
+      require_payment_method: false,
       onboarding_done: false,
       favorite_category_ids: [],
       created_at: new Date().toISOString(),

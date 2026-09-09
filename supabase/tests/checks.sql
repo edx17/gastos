@@ -516,4 +516,114 @@ begin
   raise notice 'OK · deudas: una cuenta en negativo baja el patrimonio';
 end $$;
 
+-- Los datos que crea el alta no se pueden duplicar por más que el alta se
+-- vuelva a correr. Antes se duplicaban: el `on conflict do nothing` no tenía
+-- ninguna restricción de unicidad contra la cual chocar.
+reset role;
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  medios integer;
+  cuentas integer;
+begin
+  select count(*) into medios from public.payment_methods where user_id = ana;
+
+  perform public.seed_user_defaults(ana);
+  perform public.seed_user_defaults(ana);
+
+  select count(*) into cuentas from public.payment_methods where user_id = ana;
+  assert cuentas = medios,
+    format('Volver a correr el alta agregó medios de pago: eran %s, quedaron %s', medios, cuentas);
+
+  select count(*) into cuentas from public.accounts where user_id = ana and name = 'Cuenta principal';
+  assert cuentas = 1, format('Hay %s cuentas principales', cuentas);
+
+  raise notice 'OK · alta: correrla de nuevo no duplica medios de pago ni cuentas';
+end $$;
+
+-- Y si ya quedaron duplicados de antes, se limpian reapuntando los movimientos.
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  original uuid;
+  clon uuid;
+  movimiento uuid;
+  apunta uuid;
+  borradas integer;
+begin
+  select id into original from public.payment_methods where user_id = ana and kind = 'debit' limit 1;
+
+  -- El duplicado con el acento roto, como llegaba desde PowerShell.
+  drop index if exists public.payment_methods_unique_name;
+  insert into public.payment_methods (user_id, name, kind, is_default)
+  values (ana, 'D' || chr(9500) || chr(174) || 'bito', 'debit', false)
+  returning id into clon;
+
+  insert into public.transactions (user_id, type, amount, base_amount, description,
+    transaction_date, source, payment_method_id)
+  values (ana, 'expense', 1000, 1000, 'Con el duplicado', current_date, 'manual', clon)
+  returning id into movimiento;
+
+  select public.dedupe_reference_data() into borradas;
+  assert borradas >= 1, 'No se limpió ningún duplicado';
+
+  select payment_method_id into apunta from public.transactions where id = movimiento;
+  assert apunta = original,
+    'El movimiento quedó apuntando a un medio de pago borrado en vez de al que sobrevive';
+  assert not exists (select 1 from public.payment_methods where id = clon), 'El duplicado sigue ahí';
+
+  create unique index if not exists payment_methods_unique_name
+    on public.payment_methods (user_id, name);
+
+  raise notice 'OK · duplicados: se unifican y los movimientos siguen apuntando bien';
+end $$;
+
+-- Las cuotas no son un gasto fijo y lo que no venció todavía no pasó.
+reset role;
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  plan uuid := gen_random_uuid();
+  aparece boolean;
+begin
+  insert into public.transactions (user_id, type, amount, base_amount, description, merchant_name,
+    transaction_date, source, installment_id, installment_number, installment_count)
+  select ana, 'expense', 33000, 33000, 'Parlante', 'Fravega',
+    (current_date - make_interval(months => 6 - i))::date, 'manual', plan, i, 6
+  from generate_series(1, 6) as i;
+
+  select exists (select 1 from public.detect_recurring() where label = 'Fravega') into aparece;
+  assert not aparece, 'Una compra en cuotas quedó marcada como gasto recurrente';
+
+  raise notice 'OK · recurrentes: las cuotas no se confunden con una suscripción';
+end $$;
+
+-- El medio de pago elegido en Ajustes tiene que poder guardarse.
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  medio uuid;
+  guardado uuid;
+begin
+  select id into medio from public.payment_methods where user_id = ana and kind = 'credit' limit 1;
+
+  update public.profiles
+  set default_payment_method_id = medio, require_payment_method = true
+  where user_id = ana;
+
+  select default_payment_method_id into guardado from public.profiles where user_id = ana;
+  assert guardado = medio, 'No se guardó el medio de pago por defecto';
+
+  -- Si se borra el medio de pago, el perfil no queda apuntando a la nada.
+  delete from public.payment_methods where id = medio;
+  select default_payment_method_id into guardado from public.profiles where user_id = ana;
+  assert guardado is null, 'El perfil quedó apuntando a un medio de pago borrado';
+
+  raise notice 'OK · ajustes: el medio de pago por defecto se guarda y se limpia solo';
+end $$;
+
 reset role;

@@ -21,6 +21,9 @@ export function detectRecurring(rows: Transaction[], userId: string): RecurringE
 
   for (const row of rows) {
     if (row.type !== 'expense') continue;
+    // Seis cuotas iguales parecen un gasto fijo pero se terminan; y lo que
+    // todavía no venció no pasó.
+    if (row.installment_id) continue;
     const key = normalizeText(row.merchant_name || row.description || '');
     if (key.length < 3) continue;
     const bucket = groups.get(key);

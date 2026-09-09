@@ -43,8 +43,10 @@ export function TransactionForm({
   const [date, setDate] = React.useState(initial?.transaction_date ?? todayISO());
   const [categoryId, setCategoryId] = React.useState(initial?.category_id ?? '');
   const [subcategoryId, setSubcategoryId] = React.useState(initial?.subcategory_id ?? '');
+  // El medio de pago que la persona eligió en Ajustes gana sobre el «Efectivo»
+  // que deja el alta: hoy casi nadie paga en efectivo.
   const [paymentMethodId, setPaymentMethodId] = React.useState(
-    initial?.payment_method_id ?? paymentMethods.find((m) => m.is_default)?.id ?? '',
+    initial?.payment_method_id ?? profile.default_payment_method_id ?? paymentMethods.find((m) => m.is_default)?.id ?? '',
   );
   const [notes, setNotes] = React.useState(initial?.notes ?? '');
   const [touchedCategory, setTouchedCategory] = React.useState(Boolean(initial?.category_id));
@@ -59,7 +61,12 @@ export function TransactionForm({
 
   const category = categories.find((c) => c.id === categoryId);
   const parsedAmount = parseAmountInput(amount);
-  const valid = parsedAmount !== null && parsedAmount > 0 && description.trim().length > 0;
+  const needsPaymentMethod = profile.require_payment_method && !exchangeKind && type !== 'transfer';
+  const valid =
+    parsedAmount !== null &&
+    parsedAmount > 0 &&
+    description.trim().length > 0 &&
+    (!needsPaymentMethod || Boolean(paymentMethodId));
 
   // Suggest a category as the person types, but never overwrite a manual choice.
   React.useEffect(() => {
@@ -211,9 +218,9 @@ export function TransactionForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="tx-payment">Medio de pago</Label>
+        <Label htmlFor="tx-payment">Medio de pago{needsPaymentMethod ? ' *' : ''}</Label>
         <Select id="tx-payment" value={paymentMethodId} onChange={(event) => setPaymentMethodId(event.target.value)}>
-          <option value="">Sin especificar</option>
+          <option value="">{needsPaymentMethod ? 'Elegí uno' : 'Sin especificar'}</option>
           {paymentMethods.map((method) => (
             <option key={method.id} value={method.id}>
               {method.name}

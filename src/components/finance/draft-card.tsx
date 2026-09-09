@@ -58,8 +58,13 @@ export function DraftCard({
   const [date, setDate] = React.useState(intent.date || todayISO());
   const [categoryId, setCategoryId] = React.useState(suggestion.category_id ?? '');
   const [subcategoryId, setSubcategoryId] = React.useState(suggestion.subcategory_id ?? '');
+  // Si la frase nombró el medio de pago, gana. Si no, el que la persona eligió
+  // en Ajustes, y recién después el que dejó el alta.
   const [paymentMethodId, setPaymentMethodId] = React.useState(
-    paymentMethods.find((m) => m.name === intent.payment_method)?.id ?? paymentMethods.find((m) => m.is_default)?.id ?? '',
+    paymentMethods.find((m) => m.name === intent.payment_method)?.id ??
+      profile.default_payment_method_id ??
+      paymentMethods.find((m) => m.is_default)?.id ??
+      '',
   );
   const [notes, setNotes] = React.useState('');
   const [askLearn, setAskLearn] = React.useState(false);
@@ -96,9 +101,16 @@ export function DraftCard({
   const planTotal = planValid ? perInstallment * parsedCount : 0;
   const planRemaining = planValid ? perInstallment * (parsedCount - parsedFrom + 1) : 0;
 
+  // Un cambio de moneda o el pago del resumen no se pagan «con» nada.
+  const needsPaymentMethod =
+    profile.require_payment_method && !exchangeKind && !intent.card_payment && type !== 'transfer';
+
   const canSave = exchangeKind
     ? amountValid && parsedRate > 0
-    : amountValid && description.trim().length > 0 && (!plan || planValid);
+    : amountValid &&
+      description.trim().length > 0 &&
+      (!plan || planValid) &&
+      (!needsPaymentMethod || Boolean(paymentMethodId));
 
   const buildInput = (): TransactionInput =>
     exchangeKind
@@ -400,6 +412,37 @@ export function DraftCard({
         </div>
       )}
 
+      {/* Con «pedirlo siempre» el medio de pago se muestra aunque ya venga
+          elegido: la idea es verlo y confirmarlo, no que se cuele el que
+          quedó puesto de la vez anterior. */}
+      {needsPaymentMethod ? (
+        <div
+          className={cn(
+            'space-y-1.5 border-t border-border px-5 py-3',
+            paymentMethodId ? 'bg-accent/30' : 'bg-warning/10',
+          )}
+        >
+          <Label htmlFor="draft-payment-required">¿Con qué lo pagaste?</Label>
+          <Select
+            id="draft-payment-required"
+            value={paymentMethodId}
+            onChange={(event) => setPaymentMethodId(event.target.value)}
+          >
+            <option value="">Elegí uno</option>
+            {paymentMethods.map((method) => (
+              <option key={method.id} value={method.id}>
+                {method.name}
+              </option>
+            ))}
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {paymentMethodId
+              ? 'Es el que tenés como habitual. Cambialo si este gasto fue con otro.'
+              : 'Sin esto no se guarda: lo configuraste así en Ajustes.'}
+          </p>
+        </div>
+      ) : null}
+
       {plan ? (
         <div className="space-y-3 border-t border-border bg-accent/30 px-5 py-4">
           <div className="flex items-start gap-2 text-xs text-muted-foreground">
@@ -526,7 +569,9 @@ export function DraftCard({
         <p className={cn('px-5 pb-4 text-xs text-muted-foreground')}>
           {exchangeKind
             ? 'Completá cuántos comprás y a qué cotización para poder guardar.'
-            : 'Completá el importe y la descripción para poder guardar.'}
+            : needsPaymentMethod && !paymentMethodId
+              ? 'Elegí con qué lo pagaste para poder guardar.'
+              : 'Completá el importe y la descripción para poder guardar.'}
         </p>
       ) : null}
     </Card>

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Landmark, Pencil, Plus, Trash2 } from 'lucide-react';
 import { formatMoney } from '@/lib/money';
 import { round } from '@/lib/utils';
+import { netWorth } from '@/services/analytics/net-worth';
 import { formatDateFull, today as todayISO } from '@/lib/date';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { useAsync } from '@/hooks/use-async';
@@ -75,9 +76,7 @@ export default function AccountsPage() {
   }, [categories]);
 
   const rows = accounts.data ?? [];
-  const total = rows
-    .filter((account) => account.include_in_net_worth)
-    .reduce((acc, account) => acc + account.balance * (rates[account.currency] ?? 1), 0);
+  const total = netWorth(rows, rates);
   const excluded = rows.filter((account) => !account.include_in_net_worth).length;
 
   const openNew = () => {

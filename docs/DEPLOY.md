@@ -82,8 +82,13 @@ El `project-ref` es la parte del medio de la URL: `https://<ref>.supabase.co`.
 migraciones y pegalo de una sola vez en **SQL Editor → New query**:
 
 ```powershell
-node scripts/bundle-migrations.mjs > crocante-migraciones.sql
+node scripts/bundle-migrations.mjs
 ```
+
+El script escribe `crocante-migraciones.sql` en la raíz del proyecto. **No
+redirijas la salida** (`node ... > archivo.sql`): en PowerShell eso rompe los
+acentos, porque la consola reinterpreta los bytes UTF-8 con la página de códigos
+local y «Débito» llega a la base como «D├®bito».
 
 Se puede ejecutar más de una vez sin romper nada: las migraciones son idempotentes.
 
