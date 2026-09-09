@@ -87,3 +87,60 @@ describe('cuentas', () => {
     expect(await client.getNetWorth(userId)).toBe(0);
   });
 });
+
+describe('saldo inicial', () => {
+  it('se puede anclar en una fecha pasada', async () => {
+    const account = await client.createAccount(userId, {
+      name: 'Caja de ahorro',
+      currency: 'ARS',
+      kind: 'savings',
+      balance: 800_000,
+      balance_as_of: '2026-09-01',
+    });
+
+    expect(account.balance_updated_at).toBe('2026-09-01');
+    // Con fecha vieja el ancla es el arranque del día: todo lo de esa jornada
+    // es posterior al saldo.
+    expect(account.balance_declared_at).toBe('2026-09-01T00:00:00.000Z');
+
+    const [punto] = await client.listAccountBalances(account.id);
+    expect(punto.recorded_on).toBe('2026-09-01');
+  });
+
+  it('sin fecha es de hoy, con la hora exacta', async () => {
+    const account = await client.createAccount(userId, {
+      name: 'Reservas',
+      currency: 'ARS',
+      kind: 'wallet',
+      balance: 100_000,
+    });
+    expect(account.balance_updated_at).toBe(new Date().toISOString().slice(0, 10));
+    expect(account.balance_declared_at).not.toBe(`${account.balance_updated_at}T00:00:00.000Z`);
+  });
+
+  it('un saldo con fecha futura se recorta a hoy: un pronóstico no es un saldo', async () => {
+    const account = await client.createAccount(userId, {
+      name: 'Futuro',
+      currency: 'ARS',
+      kind: 'savings',
+      balance: 1_000,
+      balance_as_of: '2099-01-01',
+    });
+    expect(account.balance_updated_at).toBe(new Date().toISOString().slice(0, 10));
+  });
+
+  it('mover sólo el ancla, sin tocar el número, deja otro punto en el historial', async () => {
+    const account = await client.createAccount(userId, {
+      name: 'Caja',
+      currency: 'ARS',
+      kind: 'savings',
+      balance: 500_000,
+      balance_as_of: '2026-09-01',
+    });
+
+    const movido = await client.updateAccount(account.id, { balance_as_of: '2026-09-05' });
+    expect(movido.balance_updated_at).toBe('2026-09-05');
+    expect(movido.balance).toBe(500_000);
+    expect(await client.listAccountBalances(account.id)).toHaveLength(2);
+  });
+});

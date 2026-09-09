@@ -165,6 +165,13 @@ export interface AccountInput {
   currency: CurrencyCode;
   kind: AccountKind;
   balance: number;
+  /**
+   * A qué fecha corresponde ese saldo. Por defecto hoy.
+   *
+   * Sirve para el saldo inicial: «al 1 de septiembre tenía tanto», y que los
+   * movimientos posteriores reconstruyan el de hoy.
+   */
+  balance_as_of?: ISODate;
   institution?: string | null;
   notes?: string | null;
   include_in_net_worth?: boolean;

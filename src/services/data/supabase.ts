@@ -535,6 +535,8 @@ export class SupabaseDataClient implements DataClient {
         currency: input.currency,
         kind: input.kind,
         balance: round(input.balance, 2),
+        // La fecha del saldo la sella un disparador: acá sólo se propone.
+        balance_updated_at: input.balance_as_of ?? null,
         institution: input.institution?.trim() || null,
         notes: input.notes?.trim() || null,
         sort_order: count ?? 0,
@@ -553,6 +555,8 @@ export class SupabaseDataClient implements DataClient {
       .from('accounts')
       .update({
         ...patch,
+        balance_as_of: undefined,
+        ...(patch.balance_as_of === undefined ? {} : { balance_updated_at: patch.balance_as_of }),
         ...(patch.name === undefined ? {} : { name: patch.name.trim() }),
         ...(patch.balance === undefined ? {} : { balance: round(patch.balance, 2) }),
         ...(patch.institution === undefined ? {} : { institution: patch.institution?.trim() || null }),

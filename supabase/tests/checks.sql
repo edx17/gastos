@@ -756,4 +756,69 @@ begin
   raise notice 'OK · cuentas: borrar una cuenta deja el medio de pago sin vínculo, no lo borra';
 end $$;
 
+-- Saldo inicial: poder anclar el saldo en una fecha pasada y que los
+-- movimientos posteriores lo reconstruyan.
+reset role;
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+do $$
+declare
+  ana uuid := '11111111-1111-4111-8111-111111111111';
+  cuenta uuid;
+  medio uuid;
+  fecha date;
+  sellado timestamptz;
+  fila record;
+  puntos integer;
+begin
+  -- «Al primero del mes tenía 800.000.»
+  insert into public.accounts (user_id, name, currency, kind, balance, balance_updated_at)
+  values (ana, 'Cuenta inicial', 'ARS', 'savings', 800000, date_trunc('month', current_date)::date)
+  returning id into cuenta;
+
+  select balance_updated_at, balance_declared_at into fecha, sellado
+  from public.accounts where id = cuenta;
+
+  assert fecha = date_trunc('month', current_date)::date,
+    format('La fecha del saldo quedó en %s en vez del primero del mes', fecha);
+  -- Con fecha vieja el ancla es el arranque de ese día, no la hora de carga.
+  assert sellado = fecha::timestamptz, format('El ancla quedó en %s', sellado);
+
+  -- El punto del historial va en la fecha del saldo, no en la de carga.
+  assert exists (
+    select 1 from public.account_balances where account_id = cuenta and recorded_on = fecha
+  ), 'El historial guardó el saldo en la fecha equivocada';
+
+  -- Los movimientos posteriores reconstruyen el saldo de hoy.
+  insert into public.payment_methods (user_id, name, kind, account_id)
+  values (ana, 'Débito inicial test', 'debit', cuenta) returning id into medio;
+
+  insert into public.transactions (user_id, type, amount, base_amount, description,
+    transaction_date, source, payment_method_id)
+  values
+    (ana, 'expense', 120000, 120000, 'Super del mes', date_trunc('month', current_date)::date + 2, 'manual', medio),
+    (ana, 'income', 50000, 50000, 'Changa', date_trunc('month', current_date)::date + 3, 'manual', medio);
+
+  for fila in select * from public.account_movement_deltas() loop
+    if fila.account_id = cuenta then
+      assert fila.delta = -70000, format('El desvío debería ser -70000, es %s', fila.delta);
+    end if;
+  end loop;
+
+  -- Mover sólo la fecha, sin tocar el número, también es una operación válida.
+  update public.accounts set balance_updated_at = current_date - 1 where id = cuenta;
+  select balance_updated_at into fecha from public.accounts where id = cuenta;
+  assert fecha = current_date - 1, format('No se pudo mover el ancla: quedó en %s', fecha);
+
+  select count(*) into puntos from public.account_balances where account_id = cuenta;
+  assert puntos = 2, format('Deberían quedar 2 puntos en el historial, hay %s', puntos);
+
+  -- Un saldo con fecha futura no es un saldo: se recorta a hoy.
+  update public.accounts set balance = 900000, balance_updated_at = current_date + 30 where id = cuenta;
+  select balance_updated_at into fecha from public.accounts where id = cuenta;
+  assert fecha = current_date, format('Un saldo del futuro debería quedar en hoy, quedó en %s', fecha);
+
+  raise notice 'OK · saldo inicial: se ancla en la fecha elegida y los movimientos lo reconstruyen';
+end $$;
+
 reset role;

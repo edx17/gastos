@@ -34,6 +34,7 @@ const empty = (currency: CurrencyCode): AccountInput => ({
   currency,
   kind: 'savings',
   balance: 0,
+  balance_as_of: todayISO(),
   institution: '',
   notes: '',
   include_in_net_worth: true,
@@ -98,6 +99,7 @@ export default function AccountsPage() {
       currency: account.currency,
       kind: account.kind,
       balance: account.balance,
+      balance_as_of: account.balance_updated_at ?? todayISO(),
       institution: account.institution ?? '',
       notes: account.notes ?? '',
       include_in_net_worth: account.include_in_net_worth,
@@ -121,7 +123,7 @@ export default function AccountsPage() {
 
     setSaving(true);
     try {
-      const input = { ...draft, balance };
+      const input = { ...draft, balance, balance_as_of: draft.balance_as_of ?? todayISO() };
       if (editing) {
         await client.updateAccount(editing.id, input);
         if (asYield && delta > 0) {
@@ -321,7 +323,7 @@ export default function AccountsPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="account-balance">Saldo de hoy</Label>
+            <Label htmlFor="account-balance">Saldo</Label>
             <div className="flex gap-2">
               <Input
                 id="account-balance"
@@ -336,6 +338,25 @@ export default function AccountsPage() {
                 className="w-32"
               />
             </div>
+          </div>
+
+          {/* Poder fechar el saldo atrás es lo que permite cargar el saldo
+              inicial: «al primero del mes tenía tanto», y que los movimientos
+              posteriores reconstruyan el de hoy. */}
+          <div className="space-y-1.5">
+            <Label htmlFor="account-balance-date">¿A qué fecha?</Label>
+            <Input
+              id="account-balance-date"
+              type="date"
+              max={todayISO()}
+              value={draft.balance_as_of ?? todayISO()}
+              onChange={(event) => setDraft({ ...draft, balance_as_of: event.target.value || todayISO() })}
+            />
+            <p className="text-xs text-muted-foreground">
+              {(draft.balance_as_of ?? todayISO()) === todayISO()
+                ? 'Hoy. Si querés arrancar de más atrás, poné esa fecha y cargá los movimientos desde entonces.'
+                : 'Los movimientos posteriores a esa fecha se suman solos para llegar al saldo de hoy.'}
+            </p>
           </div>
 
           {editing && delta !== 0 ? (

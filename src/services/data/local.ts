@@ -85,6 +85,22 @@ interface StoredUser {
   created_at: string;
 }
 
+/**
+ * Sella la fecha del saldo declarado.
+ *
+ * Con fecha de hoy vale la hora exacta, para distinguir lo que se cargue
+ * después. Con una fecha vieja el ancla es el arranque de ese día: todo lo de
+ * esa jornada es posterior al saldo. Nunca hacia adelante.
+ */
+function stampBalance(asOf?: string): Pick<Account, 'balance_updated_at' | 'balance_declared_at'> {
+  const hoy = today();
+  const fecha = asOf && asOf < hoy ? asOf : hoy;
+  return {
+    balance_updated_at: fecha,
+    balance_declared_at: fecha === hoy ? new Date().toISOString() : `${fecha}T00:00:00.000Z`,
+  };
+}
+
 const AUTH_KEY = 'crocante.auth.v1';
 const SESSION_KEY = 'crocante.session.v1';
 const dbKey = (userId: string) => `crocante.db.v1.${userId}`;
@@ -636,8 +652,7 @@ export class LocalDataClient implements DataClient {
       currency: input.currency,
       kind: input.kind,
       balance: round(input.balance, 2),
-      balance_updated_at: today(),
-      balance_declared_at: new Date().toISOString(),
+      ...stampBalance(input.balance_as_of),
       institution: input.institution?.trim() || null,
       notes: input.notes?.trim() || null,
       sort_order: db.accounts.length,
@@ -657,7 +672,9 @@ export class LocalDataClient implements DataClient {
     const account = db.accounts.find((row) => row.id === id);
     if (!account) throw err('account/not-found', 'No encontré esa cuenta.');
 
-    const changedBalance = patch.balance !== undefined && round(patch.balance, 2) !== account.balance;
+    const changedBalance =
+      (patch.balance !== undefined && round(patch.balance, 2) !== account.balance) ||
+      (patch.balance_as_of !== undefined && patch.balance_as_of !== account.balance_updated_at);
     Object.assign(account, {
       ...patch,
       name: patch.name?.trim() ?? account.name,
@@ -665,10 +682,9 @@ export class LocalDataClient implements DataClient {
       notes: patch.notes === undefined ? account.notes : patch.notes?.trim() || null,
       balance: patch.balance === undefined ? account.balance : round(patch.balance, 2),
     });
-    // Sólo cambiar el número mueve la fecha y deja un punto en el historial.
+    // Cambiar el número o mover el ancla deja un punto en el historial.
     if (changedBalance) {
-      account.balance_updated_at = today();
-      account.balance_declared_at = new Date().toISOString();
+      Object.assign(account, stampBalance(patch.balance_as_of));
       this.recordBalance(db, account);
     }
     this.writeDb(userId, db);
@@ -707,7 +723,7 @@ export class LocalDataClient implements DataClient {
 
   /** Un saldo por cuenta y por día: corregirlo el mismo día pisa el anterior. */
   private recordBalance(db: Database, account: Account) {
-    const recorded_on = today();
+    const recorded_on = account.balance_updated_at ?? today();
     const existing = db.accountBalances.find(
       (point) => point.account_id === account.id && point.recorded_on === recorded_on,
     );
